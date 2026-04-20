@@ -443,9 +443,18 @@ body {
 
 <script>
 // ── Firebase config (saved to localStorage per browser) ──
+const HARDCODED_CONFIG = {
+  apiKey: "AIzaSyDfDH7nxVN6bcbz9x6LOD45HCaWJoTUJqk",
+  authDomain: "my-calendar-5136d.firebaseapp.com",
+  databaseURL: "https://my-calendar-5136d-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "my-calendar-5136d",
+  appId: "1:359586940060:web:5a89d5aefb82d397db5959"
+};
+
 const CONFIG_KEY = 'caltodo_firebase_config';
 
 function loadConfig() {
+  if (HARDCODED_CONFIG.apiKey) return HARDCODED_CONFIG;
   try { return JSON.parse(localStorage.getItem(CONFIG_KEY)) || null; } catch { return null; }
 }
 function saveConfig(cfg) {
