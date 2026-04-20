@@ -149,17 +149,17 @@ body {
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
 /* ── Main layout ── */
-#main-layout { display: flex; flex: 1; overflow: hidden; position: relative; }
-#calendar-section { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+#main-layout { display: flex; flex: 1; overflow: hidden; }
+#calendar-section { flex: 1; padding: 16px; overflow: hidden; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 #weekday-headers { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding-bottom: 4px; }
 .weekday-label { text-align: center; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); padding: 4px 0; }
 .weekday-label:first-child { color: #ef4444; }
 .weekday-label:last-child { color: #3b82f6; }
-#calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; flex: 1; }
+#calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 1fr; gap: 4px; flex: 1; min-height: 0; }
 .day-cell {
   background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-sm);
   padding: 6px 7px 5px; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s;
-  min-height: 72px; display: flex; flex-direction: column; user-select: none;
+  display: flex; flex-direction: column; user-select: none; overflow: hidden;
 }
 .day-cell:hover { box-shadow: var(--shadow); border-color: var(--primary); }
 .day-cell.other-month { opacity: 0.38; pointer-events: none; }
@@ -178,14 +178,12 @@ body {
 
 /* ── Side panel ── */
 #side-panel {
-  position: absolute; right: 0; top: 0; bottom: 0;
-  width: 340px; background: var(--surface); border-left: 1px solid var(--border);
+  width: 320px; flex-shrink: 0;
+  background: var(--surface); border-left: 1px solid var(--border);
   display: flex; flex-direction: column; overflow: hidden;
-  transition: transform 0.25s ease;
-  box-shadow: -4px 0 20px rgba(0,0,0,0.1);
-  z-index: 10;
+  transition: width 0.25s ease;
 }
-#side-panel.hidden { transform: translateX(100%); }
+#side-panel.hidden { width: 0; border-left-color: transparent; }
 #panel-header { padding: 16px 16px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 #panel-date-title { font-size: 1rem; font-weight: 700; flex: 1; white-space: nowrap; }
 #btn-add-task { padding: 6px 12px; background: var(--primary); color: #fff; border: none; border-radius: 20px; cursor: pointer; font-size: 0.82rem; font-weight: 600; white-space: nowrap; }
