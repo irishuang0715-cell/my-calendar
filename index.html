@@ -262,6 +262,11 @@ body {
 .add-tag-row input:focus { border-color: var(--primary); }
 .tag-modal-footer { display: flex; justify-content: flex-end; }
 
+.section-divider {
+  font-size: 0.75rem; font-weight: 600; color: var(--text-faint);
+  padding: 8px 4px 4px; border-top: 1px solid var(--border); margin-top: 4px;
+}
+
 .hidden { display: none !important; }
 
 @media (max-width: 680px) {
@@ -597,6 +602,7 @@ function renderCalendar() {
       if (dateStr === state.selectedDate) cell.classList.add('selected');
       cell.dataset.date = dateStr;
       cell.addEventListener('click', () => openPanel(dateStr));
+      cell.addEventListener('dblclick', e => { e.stopPropagation(); openPanel(dateStr); openAddModal(dateStr); });
     }
     const [,,dayNum] = dateStr.split('-');
     const numEl = document.createElement('div');
@@ -658,16 +664,32 @@ function closePanel() {
   document.getElementById('side-panel').classList.add('hidden');
   renderCalendar();
 }
+function statusOrder(s) { return s === '進行中' ? 0 : s === '未完成' ? 1 : s === '待確認' ? 2 : 3; }
+
 function renderTaskList() {
   const list = document.getElementById('task-list');
-  const tasks = getTasksForDate(state.selectedDate);
+  const allTasks = getTasksForDate(state.selectedDate);
   list.innerHTML = '';
-  if (tasks.length === 0) {
+  if (allTasks.length === 0) {
     list.innerHTML = '<div class="empty-state"><span>📋</span>這天還沒有任務<br>點擊「新增任務」開始記錄</div>';
     return;
   }
+
+  const activeTasks = allTasks
+    .filter(t => t.status !== '已完成')
+    .sort((a, b) => statusOrder(a.status) - statusOrder(b.status) || (a.order ?? a.createdAt) - (b.order ?? b.createdAt));
+  const doneTasks = allTasks.filter(t => t.status === '已完成');
+
   let dragSrcId = null;
-  tasks.forEach(task => {
+  const tasks = [...activeTasks, ...doneTasks];
+
+  tasks.forEach((task, idx) => {
+    if (idx === activeTasks.length && doneTasks.length > 0) {
+      const divider = document.createElement('div');
+      divider.className = 'section-divider';
+      divider.textContent = '✓ 已完成';
+      list.appendChild(divider);
+    }
     const card = document.createElement('div');
     card.className = `task-card priority-${task.priority} status-${task.status}`;
     card.draggable = true;
