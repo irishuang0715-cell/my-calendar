@@ -265,7 +265,14 @@ body {
 .section-divider {
   font-size: 0.75rem; font-weight: 600; color: var(--text-faint);
   padding: 8px 4px 4px; border-top: 1px solid var(--border); margin-top: 4px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; user-select: none;
 }
+.section-divider:hover { color: var(--text-muted); }
+.section-divider-arrow {
+  font-size: 0.7rem; transition: transform 0.2s ease;
+}
+.section-divider.collapsed .section-divider-arrow { transform: rotate(-90deg); }
 
 .hidden { display: none !important; }
 
@@ -449,7 +456,8 @@ const state = {
   selectedDate: null,
   editingTaskId: null,
   uid: null,
-  db: null
+  db: null,
+  doneCollapsed: false
 };
 
 // ── Firebase init ──
@@ -681,15 +689,9 @@ function renderTaskList() {
   const doneTasks = allTasks.filter(t => t.status === '已完成');
 
   let dragSrcId = null;
-  const tasks = [...activeTasks, ...doneTasks];
 
-  tasks.forEach((task, idx) => {
-    if (idx === activeTasks.length && doneTasks.length > 0) {
-      const divider = document.createElement('div');
-      divider.className = 'section-divider';
-      divider.textContent = '✓ 已完成';
-      list.appendChild(divider);
-    }
+  function renderCards(taskArr) {
+    taskArr.forEach(task => {
     const card = document.createElement('div');
     card.className = `task-card priority-${task.priority} status-${task.status}`;
     card.draggable = true;
@@ -738,7 +740,19 @@ function renderTaskList() {
     });
 
     list.appendChild(card);
-  });
+    });
+  }
+
+  renderCards(activeTasks);
+
+  if (doneTasks.length > 0) {
+    const divider = document.createElement('div');
+    divider.className = 'section-divider' + (state.doneCollapsed ? ' collapsed' : '');
+    divider.innerHTML = `<span>✓ 已完成（${doneTasks.length}）</span><span class="section-divider-arrow">▼</span>`;
+    divider.addEventListener('click', () => { state.doneCollapsed = !state.doneCollapsed; renderTaskList(); });
+    list.appendChild(divider);
+    if (!state.doneCollapsed) renderCards(doneTasks);
+  }
 }
 
 function reorderTasks(srcId, targetId, insertBefore) {
