@@ -443,18 +443,9 @@ body {
 
 <script>
 // ── Firebase config (saved to localStorage per browser) ──
-const HARDCODED_CONFIG = {
-  apiKey: "你的apiKey",
-  authDomain: "你的authDomain",
-  databaseURL: "你的databaseURL",
-  projectId: "你的projectId",
-  appId: "你的appId"
-};
 const CONFIG_KEY = 'caltodo_firebase_config';
 
 function loadConfig() {
- function loadConfig() {
-  if (HARDCODED_CONFIG.apiKey) return HARDCODED_CONFIG;
   try { return JSON.parse(localStorage.getItem(CONFIG_KEY)) || null; } catch { return null; }
 }
 function saveConfig(cfg) {
