@@ -149,7 +149,7 @@ body {
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
 /* ── Main layout ── */
-#main-layout { display: flex; flex: 1; overflow: hidden; }
+#main-layout { display: flex; flex: 1; overflow: hidden; position: relative; }
 #calendar-section { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 #weekday-headers { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding-bottom: 4px; }
 .weekday-label { text-align: center; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); padding: 4px 0; }
@@ -178,11 +178,14 @@ body {
 
 /* ── Side panel ── */
 #side-panel {
+  position: absolute; right: 0; top: 0; bottom: 0;
   width: 340px; background: var(--surface); border-left: 1px solid var(--border);
   display: flex; flex-direction: column; overflow: hidden;
-  transition: transform 0.25s ease, width 0.25s ease;
+  transition: transform 0.25s ease;
+  box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+  z-index: 10;
 }
-#side-panel.hidden { width: 0; transform: translateX(340px); border-left: none; }
+#side-panel.hidden { transform: translateX(100%); }
 #panel-header { padding: 16px 16px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 #panel-date-title { font-size: 1rem; font-weight: 700; flex: 1; white-space: nowrap; }
 #btn-add-task { padding: 6px 12px; background: var(--primary); color: #fff; border: none; border-radius: 20px; cursor: pointer; font-size: 0.82rem; font-weight: 600; white-space: nowrap; }
