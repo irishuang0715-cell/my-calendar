@@ -192,8 +192,15 @@ body {
 #task-list { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 .empty-state { text-align: center; color: var(--text-faint); font-size: 0.88rem; margin-top: 40px; line-height: 1.8; }
 .empty-state span { font-size: 1.8rem; display: block; margin-bottom: 8px; }
-.task-card { background: var(--surface2); border: 1px solid var(--border); border-left: 4px solid; border-radius: var(--radius-sm); padding: 10px 12px; cursor: pointer; transition: box-shadow 0.15s; }
+.task-card { background: var(--surface2); border: 1px solid var(--border); border-left: 4px solid; border-radius: var(--radius-sm); padding: 10px 12px; cursor: pointer; transition: box-shadow 0.15s, opacity 0.15s; display: flex; flex-direction: column; gap: 0; }
 .task-card:hover { box-shadow: var(--shadow); }
+.task-card-top { display: flex; align-items: flex-start; gap: 6px; }
+.drag-handle { color: var(--text-faint); cursor: grab; font-size: 1rem; line-height: 1.4; flex-shrink: 0; padding: 0 2px; user-select: none; }
+.drag-handle:active { cursor: grabbing; }
+.task-card-body { flex: 1; min-width: 0; }
+.task-card.dragging { opacity: 0.4; }
+.task-card.drag-over-top { border-top: 2.5px solid var(--primary); }
+.task-card.drag-over-bottom { border-bottom: 2.5px solid var(--primary); }
 .task-card.priority-高 { border-left-color: var(--priority-high); }
 .task-card.priority-中 { border-left-color: var(--priority-mid); }
 .task-card.priority-低 { border-left-color: var(--priority-low); }
@@ -549,7 +556,7 @@ function priorityOrder(p) { return p === '高' ? 0 : p === '中' ? 1 : 2; }
 function getTasksForDate(dateStr) {
   return Object.values(state.data.tasks)
     .filter(t => t.dueDate === dateStr)
-    .sort((a, b) => priorityOrder(a.priority) - priorityOrder(b.priority));
+    .sort((a, b) => (a.order ?? a.createdAt) - (b.order ?? b.createdAt));
 }
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -659,19 +666,67 @@ function renderTaskList() {
     list.innerHTML = '<div class="empty-state"><span>📋</span>這天還沒有任務<br>點擊「新增任務」開始記錄</div>';
     return;
   }
+  let dragSrcId = null;
   tasks.forEach(task => {
     const card = document.createElement('div');
     card.className = `task-card priority-${task.priority} status-${task.status}`;
+    card.draggable = true;
+    card.dataset.taskId = task.id;
     card.innerHTML = `
-      <div class="task-card-title">${escHtml(task.title)}</div>
-      <div class="task-card-meta">
-        <span class="badge badge-status-${task.status}">${task.status}</span>
-        <span class="badge badge-priority-${task.priority}">${task.priority}優先</span>
-        ${task.tags.map(t=>`<span class="badge badge-tag">${escHtml(t)}</span>`).join('')}
+      <div class="task-card-top">
+        <span class="drag-handle" title="拖曳排序">⠿</span>
+        <div class="task-card-body">
+          <div class="task-card-title">${escHtml(task.title)}</div>
+          <div class="task-card-meta">
+            <span class="badge badge-status-${task.status}">${task.status}</span>
+            <span class="badge badge-priority-${task.priority}">${task.priority}優先</span>
+            ${task.tags.map(t=>`<span class="badge badge-tag">${escHtml(t)}</span>`).join('')}
+          </div>
+        </div>
       </div>`;
-    card.addEventListener('click', () => openEditModal(task.id));
+
+    card.querySelector('.task-card-body').addEventListener('click', () => openEditModal(task.id));
+
+    card.addEventListener('dragstart', e => {
+      dragSrcId = task.id;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      list.querySelectorAll('.task-card').forEach(c => c.classList.remove('drag-over-top', 'drag-over-bottom'));
+    });
+    card.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (dragSrcId === task.id) return;
+      const rect = card.getBoundingClientRect();
+      const mid = rect.top + rect.height / 2;
+      list.querySelectorAll('.task-card').forEach(c => c.classList.remove('drag-over-top', 'drag-over-bottom'));
+      card.classList.add(e.clientY < mid ? 'drag-over-top' : 'drag-over-bottom');
+    });
+    card.addEventListener('dragleave', () => {
+      card.classList.remove('drag-over-top', 'drag-over-bottom');
+    });
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      if (dragSrcId === task.id) return;
+      const rect = card.getBoundingClientRect();
+      const dropBefore = e.clientY < rect.top + rect.height / 2;
+      reorderTasks(dragSrcId, task.id, dropBefore);
+    });
+
     list.appendChild(card);
   });
+}
+
+function reorderTasks(srcId, targetId, insertBefore) {
+  const tasks = getTasksForDate(state.selectedDate);
+  const ids = tasks.map(t => t.id).filter(id => id !== srcId);
+  const targetIdx = ids.indexOf(targetId);
+  ids.splice(insertBefore ? targetIdx : targetIdx + 1, 0, srcId);
+  ids.forEach((id, i) => { state.data.tasks[id].order = (i + 1) * 1000; });
+  saveData();
+  renderTaskList();
 }
 
 // ── Task Modal ──
@@ -729,7 +784,9 @@ function saveTask(e) {
     Object.assign(task, { title, status: document.getElementById('f-status').value, priority: document.getElementById('f-priority').value, dueDate: document.getElementById('f-due').value, notes: document.getElementById('f-notes').value.trim(), tags, updatedAt: now });
   } else {
     const id = generateId();
-    state.data.tasks[id] = { id, title, status: document.getElementById('f-status').value, priority: document.getElementById('f-priority').value, dueDate: document.getElementById('f-due').value, notes: document.getElementById('f-notes').value.trim(), tags, createdAt: now, updatedAt: now };
+    const existingTasks = getTasksForDate(document.getElementById('f-due').value);
+    const maxOrder = existingTasks.length ? Math.max(...existingTasks.map(t => t.order ?? t.createdAt)) : 0;
+    state.data.tasks[id] = { id, title, status: document.getElementById('f-status').value, priority: document.getElementById('f-priority').value, dueDate: document.getElementById('f-due').value, notes: document.getElementById('f-notes').value.trim(), tags, order: maxOrder + 1000, createdAt: now, updatedAt: now };
   }
   saveData();
   closeModal();
