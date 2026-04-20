@@ -181,9 +181,9 @@ body {
   width: 320px; flex-shrink: 0;
   background: var(--surface); border-left: 1px solid var(--border);
   display: flex; flex-direction: column; overflow: hidden;
-  transition: width 0.25s ease;
+  transition: transform 0.25s ease;
 }
-#side-panel.hidden { width: 0; border-left-color: transparent; }
+#side-panel.hidden { transform: translateX(320px); pointer-events: none; border-left-color: transparent; }
 #panel-header { padding: 16px 16px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 #panel-date-title { font-size: 1rem; font-weight: 700; flex: 1; white-space: nowrap; }
 #btn-add-task { padding: 6px 12px; background: var(--primary); color: #fff; border: none; border-radius: 20px; cursor: pointer; font-size: 0.82rem; font-weight: 600; white-space: nowrap; }
@@ -541,6 +541,10 @@ function onAuthChanged(user) {
     state.currentYear = now.getFullYear();
     state.currentMonth = now.getMonth();
     startRealtimeSync();
+    // Auto-open today's panel
+    state.selectedDate = todayStr();
+    document.getElementById('panel-date-title').textContent = formatDateDisplay(todayStr());
+    document.getElementById('side-panel').classList.remove('hidden');
   } else {
     state.uid = null;
     document.getElementById('app').classList.add('hidden');
