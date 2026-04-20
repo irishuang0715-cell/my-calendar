@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日曆代辦清單</title>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<style>
+:root {
+  --bg: #f0f2f7;
+  --surface: #ffffff;
+  --surface2: #f8f9fc;
+  --border: #e2e6f0;
+  --primary: #4f6ef7;
+  --primary-light: #eef0ff;
+  --text: #1a1d2e;
+  --text-muted: #6b7280;
+  --text-faint: #9ca3af;
+  --priority-high: #ef4444;
+  --priority-mid: #f97316;
+  --priority-low: #3b82f6;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 24px rgba(0,0,0,0.14);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Setup / Login overlays ── */
+.full-overlay {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 500;
+  padding: 20px;
+}
+.overlay-card {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 36px 32px;
+  width: min(520px, 100%);
+  box-shadow: var(--shadow-md);
+}
+.overlay-card h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 8px; }
+.overlay-card p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.7; margin-bottom: 16px; }
+.setup-steps { background: var(--surface2); border-radius: var(--radius-sm); padding: 16px 20px; margin-bottom: 20px; }
+.setup-steps li { font-size: 0.85rem; line-height: 2; color: var(--text); }
+.setup-steps code {
+  background: #eef0ff; color: var(--primary);
+  padding: 1px 6px; border-radius: 4px; font-size: 0.82rem;
+}
+.config-fields { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.config-field { display: flex; flex-direction: column; gap: 4px; }
+.config-field label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); }
+.config-field input {
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  padding: 8px 11px; font-size: 0.85rem; outline: none; font-family: monospace;
+}
+.config-field input:focus { border-color: var(--primary); }
+.config-note { font-size: 0.78rem; color: var(--text-faint); margin-bottom: 20px; }
+
+.btn-google {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 12px;
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface); cursor: pointer;
+  font-size: 0.95rem; font-weight: 600; color: var(--text);
+  transition: box-shadow 0.15s, background 0.15s;
+}
+.btn-google:hover { box-shadow: var(--shadow); background: var(--surface2); }
+.btn-google svg { width: 20px; height: 20px; flex-shrink: 0; }
+.btn-full {
+  width: 100%; padding: 12px;
+  background: var(--primary); color: #fff;
+  border: none; border-radius: var(--radius-sm);
+  font-size: 0.95rem; font-weight: 600; cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-full:hover { opacity: 0.87; }
+.auth-error { font-size: 0.82rem; color: #b91c1c; margin-top: 8px; text-align: center; }
+
+/* ── Header ── */
+#app-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 20px;
+  display: flex; align-items: center; gap: 12px;
+  flex-shrink: 0;
+}
+#month-title { font-size: 1.2rem; font-weight: 700; flex: 1; text-align: center; }
+.btn-nav {
+  width: 36px; height: 36px;
+  border: 1px solid var(--border); border-radius: 50%;
+  background: var(--surface); cursor: pointer;
+  font-size: 1.2rem; display: flex; align-items: center; justify-content: center;
+  color: var(--text); transition: background 0.15s, border-color 0.15s;
+}
+.btn-nav:hover { background: var(--primary-light); border-color: var(--primary); }
+#btn-today, #btn-manage-tags {
+  padding: 6px 14px; border: 1px solid var(--border); border-radius: 20px;
+  background: var(--surface); cursor: pointer; font-size: 0.85rem; color: var(--text-muted);
+  transition: background 0.15s; white-space: nowrap;
+}
+#btn-today:hover, #btn-manage-tags:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
+
+#user-info {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.82rem; color: var(--text-muted);
+  border-left: 1px solid var(--border); padding-left: 12px;
+}
+#user-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  object-fit: cover; border: 1.5px solid var(--border);
+}
+#user-avatar-fallback {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--primary-light); color: var(--primary);
+  font-size: 0.75rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+#btn-signout {
+  padding: 4px 10px; border: 1px solid var(--border); border-radius: 20px;
+  background: none; cursor: pointer; font-size: 0.78rem; color: var(--text-muted);
+  transition: background 0.12s;
+}
+#btn-signout:hover { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+.sync-indicator {
+  font-size: 0.75rem; color: var(--text-faint);
+  display: flex; align-items: center; gap: 4px;
+}
+.sync-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: #10b981;
+}
+.sync-dot.syncing { background: #f59e0b; animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ── Main layout ── */
+#main-layout { display: flex; flex: 1; overflow: hidden; }
+#calendar-section { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+#weekday-headers { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding-bottom: 4px; }
+.weekday-label { text-align: center; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); padding: 4px 0; }
+.weekday-label:first-child { color: #ef4444; }
+.weekday-label:last-child { color: #3b82f6; }
+#calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; flex: 1; }
+.day-cell {
+  background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  padding: 6px 7px 5px; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s;
+  min-height: 72px; display: flex; flex-direction: column; user-select: none;
+}
+.day-cell:hover { box-shadow: var(--shadow); border-color: var(--primary); }
+.day-cell.other-month { opacity: 0.38; pointer-events: none; }
+.day-cell.today { border-color: var(--primary); background: var(--primary-light); }
+.day-cell.selected { box-shadow: 0 0 0 2.5px var(--primary); border-color: var(--primary); }
+.day-num { font-size: 0.82rem; font-weight: 600; line-height: 1; margin-bottom: 5px; color: var(--text); }
+.day-cell.today .day-num { color: var(--primary); }
+.day-cell.sunday .day-num { color: #ef4444; }
+.day-cell.saturday .day-num { color: #3b82f6; }
+.task-dots { display: flex; flex-wrap: wrap; gap: 3px; margin-top: auto; }
+.dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.dot-high { background: var(--priority-high); }
+.dot-mid  { background: var(--priority-mid); }
+.dot-low  { background: var(--priority-low); }
+.dot-more { font-size: 0.6rem; color: var(--text-muted); line-height: 7px; }
+
+/* ── Side panel ── */
+#side-panel {
+  width: 340px; background: var(--surface); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+  transition: transform 0.25s ease, width 0.25s ease;
+}
+#side-panel.hidden { width: 0; transform: translateX(340px); border-left: none; }
+#panel-header { padding: 16px 16px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+#panel-date-title { font-size: 1rem; font-weight: 700; flex: 1; white-space: nowrap; }
+#btn-add-task { padding: 6px 12px; background: var(--primary); color: #fff; border: none; border-radius: 20px; cursor: pointer; font-size: 0.82rem; font-weight: 600; white-space: nowrap; }
+#btn-add-task:hover { opacity: 0.85; }
+#btn-close-panel { width: 28px; height: 28px; border: none; background: var(--surface2); border-radius: 50%; cursor: pointer; font-size: 1rem; color: var(--text-muted); display: flex; align-items: center; justify-content: center; }
+#btn-close-panel:hover { background: var(--border); }
+#task-list { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.empty-state { text-align: center; color: var(--text-faint); font-size: 0.88rem; margin-top: 40px; line-height: 1.8; }
+.empty-state span { font-size: 1.8rem; display: block; margin-bottom: 8px; }
+.task-card { background: var(--surface2); border: 1px solid var(--border); border-left: 4px solid; border-radius: var(--radius-sm); padding: 10px 12px; cursor: pointer; transition: box-shadow 0.15s; }
+.task-card:hover { box-shadow: var(--shadow); }
+.task-card.priority-高 { border-left-color: var(--priority-high); }
+.task-card.priority-中 { border-left-color: var(--priority-mid); }
+.task-card.priority-低 { border-left-color: var(--priority-low); }
+.task-card-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 6px; word-break: break-all; }
+.task-card.status-已完成 .task-card-title { text-decoration: line-through; color: var(--text-muted); }
+.task-card-meta { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.badge { display: inline-block; font-size: 0.72rem; padding: 2px 7px; border-radius: 20px; font-weight: 600; white-space: nowrap; }
+.badge-status-未完成 { background: #f1f3f7; color: var(--text-muted); }
+.badge-status-進行中 { background: #fff7e6; color: #b45309; }
+.badge-status-已完成 { background: #ecfdf5; color: #065f46; }
+.badge-status-待確認 { background: #f5f3ff; color: #5b21b6; }
+.badge-priority-高 { background: #fef2f2; color: #b91c1c; }
+.badge-priority-中 { background: #fff7ed; color: #c2410c; }
+.badge-priority-低 { background: #eff6ff; color: #1d4ed8; }
+.badge-tag { background: #f0f2f7; color: var(--text-muted); border: 1px solid var(--border); }
+
+/* ── Modal ── */
+#modal-overlay, #tag-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
+#task-modal, #tag-modal { background: var(--surface); border-radius: 14px; padding: 24px; width: min(480px, 100%); max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-md); }
+#tag-modal { width: min(360px, 100%); }
+.modal-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 18px; }
+#task-form { display: flex; flex-direction: column; gap: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); }
+.form-required { color: var(--priority-high); }
+.form-input, .form-select, .form-textarea { border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 9px 11px; font-size: 0.9rem; font-family: inherit; color: var(--text); background: var(--surface); transition: border-color 0.15s; outline: none; width: 100%; }
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--primary); }
+.form-textarea { resize: vertical; min-height: 80px; }
+.form-row { display: flex; gap: 10px; }
+.form-row .form-group { flex: 1; }
+.tag-checkboxes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.tag-check-label { display: flex; align-items: center; gap: 4px; padding: 4px 10px; border: 1.5px solid var(--border); border-radius: 20px; font-size: 0.8rem; cursor: pointer; transition: background 0.12s, border-color 0.12s; user-select: none; }
+.tag-check-label:hover { border-color: var(--primary); background: var(--primary-light); }
+.tag-check-label input { display: none; }
+.tag-check-label.checked { background: var(--primary-light); border-color: var(--primary); color: var(--primary); font-weight: 600; }
+.add-tag-inline { display: flex; gap: 6px; margin-top: 6px; }
+.add-tag-inline input { flex: 1; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 0.82rem; outline: none; }
+.add-tag-inline input:focus { border-color: var(--primary); }
+.btn-sm { padding: 6px 12px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: opacity 0.15s; }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { opacity: 0.85; }
+.btn-ghost { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border) !important; }
+.btn-ghost:hover { background: var(--border); }
+#modal-actions { display: flex; gap: 8px; justify-content: flex-end; padding-top: 6px; border-top: 1px solid var(--border); }
+#modal-actions button { padding: 8px 18px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-size: 0.88rem; font-weight: 600; }
+#btn-save-task { background: var(--primary); color: #fff; }
+#btn-save-task:hover { opacity: 0.85; }
+#btn-cancel-modal { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border) !important; }
+#btn-cancel-modal:hover { background: var(--border); }
+#btn-delete-task { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca !important; margin-right: auto; }
+#btn-delete-task:hover { background: #fee2e2; }
+#tag-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; max-height: 260px; overflow-y: auto; }
+.tag-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.tag-item-name { flex: 1; font-size: 0.88rem; }
+.tag-item-del { width: 24px; height: 24px; border: none; background: none; cursor: pointer; color: var(--text-faint); font-size: 1rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background 0.12s, color 0.12s; }
+.tag-item-del:hover { background: #fee2e2; color: #b91c1c; }
+.add-tag-row { display: flex; gap: 8px; margin-bottom: 14px; }
+.add-tag-row input { flex: 1; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 8px 11px; font-size: 0.88rem; outline: none; }
+.add-tag-row input:focus { border-color: var(--primary); }
+.tag-modal-footer { display: flex; justify-content: flex-end; }
+
+.hidden { display: none !important; }
+
+@media (max-width: 680px) {
+  body { overflow: auto; }
+  #main-layout { flex-direction: column; overflow: visible; }
+  #calendar-section { overflow: visible; }
+  #side-panel { position: fixed; bottom: 0; left: 0; width: 100%; height: 62vh; border-left: none; border-top: 1px solid var(--border); border-radius: 18px 18px 0 0; box-shadow: 0 -4px 24px rgba(0,0,0,0.12); transform: translateY(0); z-index: 100; }
+  #side-panel.hidden { width: 100%; transform: translateY(110%); }
+  .day-cell { min-height: 52px; }
+  #user-info span.user-name { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Setup screen (shown when Firebase not configured) ── -->
+<div id="setup-screen" class="full-overlay hidden">
+  <div class="overlay-card">
+    <h2>⚙️ 首次設定 Firebase</h2>
+    <p>為了讓資料在不同裝置之間同步，需要連接 Firebase 服務。請依照步驟填入你的 Firebase 設定（免費，5 分鐘完成）：</p>
+    <ol class="setup-steps">
+      <li>前往 <strong>console.firebase.google.com</strong> → 建立新專案</li>
+      <li>左側選單 → <code>Authentication</code> → 啟用 <code>Google</code> 登入</li>
+      <li>左側選單 → <code>Realtime Database</code> → 建立資料庫（選亞洲區域）</li>
+      <li>規則分頁貼上：<code>{"rules":{".read":"auth!=null",".write":"auth!=null"}}</code></li>
+      <li>專案設定 ⚙️ → 你的應用程式 → 複製 firebaseConfig → 填入下方</li>
+    </ol>
+    <div class="config-fields">
+      <div class="config-field"><label>apiKey</label><input id="cfg-apiKey" placeholder="AIzaSy..."></div>
+      <div class="config-field"><label>authDomain</label><input id="cfg-authDomain" placeholder="your-project.firebaseapp.com"></div>
+      <div class="config-field"><label>databaseURL</label><input id="cfg-databaseURL" placeholder="https://your-project-default-rtdb.asia-southeast1.firebasedatabase.app"></div>
+      <div class="config-field"><label>projectId</label><input id="cfg-projectId" placeholder="your-project-id"></div>
+      <div class="config-field"><label>appId</label><input id="cfg-appId" placeholder="1:123456:web:abc..."></div>
+    </div>
+    <p class="config-note">設定只存在此瀏覽器，換電腦需重新填一次（或直接把填好的 HTML 檔案複製過去）</p>
+    <button class="btn-full" id="btn-save-config">儲存並連線</button>
+    <p class="auth-error hidden" id="config-error"></p>
+  </div>
+</div>
+
+<!-- ── Login screen ── -->
+<div id="login-screen" class="full-overlay hidden">
+  <div class="overlay-card" style="max-width:360px">
+    <h2 style="text-align:center;margin-bottom:6px">日曆代辦清單</h2>
+    <p style="text-align:center;margin-bottom:24px">登入後資料自動同步至所有裝置</p>
+    <button class="btn-google" id="btn-signin">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      使用 Google 帳號登入
+    </button>
+    <p class="auth-error hidden" id="login-error"></p>
+  </div>
+</div>
+
+<!-- ── Main app ── -->
+<div id="app" class="hidden">
+  <header id="app-header">
+    <button class="btn-nav" id="btn-prev">&#8249;</button>
+    <h1 id="month-title"></h1>
+    <button class="btn-nav" id="btn-next">&#8250;</button>
+    <button id="btn-today">今天</button>
+    <button id="btn-manage-tags">標籤管理</button>
+    <div id="user-info">
+      <div id="user-avatar-fallback"></div>
+      <img id="user-avatar" class="hidden" alt="">
+      <span class="user-name" id="user-name"></span>
+      <div class="sync-indicator"><div class="sync-dot" id="sync-dot"></div><span id="sync-text">已同步</span></div>
+      <button id="btn-signout">登出</button>
+    </div>
+  </header>
+  <div id="main-layout">
+    <section id="calendar-section">
+      <div id="weekday-headers">
+        <div class="weekday-label">日</div><div class="weekday-label">一</div>
+        <div class="weekday-label">二</div><div class="weekday-label">三</div>
+        <div class="weekday-label">四</div><div class="weekday-label">五</div>
+        <div class="weekday-label">六</div>
+      </div>
+      <div id="calendar-grid"></div>
+    </section>
+    <aside id="side-panel" class="hidden">
+      <div id="panel-header">
+        <h2 id="panel-date-title"></h2>
+        <button id="btn-add-task">＋ 新增任務</button>
+        <button id="btn-close-panel">✕</button>
+      </div>
+      <div id="task-list"></div>
+    </aside>
+  </div>
+</div>
+
+<!-- Task modal -->
+<div id="modal-overlay" class="hidden">
+  <div id="task-modal">
+    <h3 class="modal-title" id="modal-title">新增任務</h3>
+    <form id="task-form" autocomplete="off">
+      <div class="form-group">
+        <label class="form-label">標題 <span class="form-required">*</span></label>
+        <input class="form-input" id="f-title" type="text" maxlength="100" placeholder="輸入任務標題…" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">狀態</label>
+          <select class="form-select" id="f-status">
+            <option value="未完成">未完成</option>
+            <option value="進行中">進行中</option>
+            <option value="已完成">已完成</option>
+            <option value="待確認">待確認</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">優先等級</label>
+          <select class="form-select" id="f-priority">
+            <option value="高">高</option>
+            <option value="中" selected>中</option>
+            <option value="低">低</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">截止日期</label>
+        <input class="form-input" id="f-due" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">分類標籤</label>
+        <div class="tag-checkboxes" id="f-tags-container"></div>
+        <div class="add-tag-inline">
+          <input type="text" id="f-new-tag" placeholder="新增標籤…" maxlength="20">
+          <button type="button" class="btn-sm btn-ghost" id="btn-add-tag-inline">新增</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">備註</label>
+        <textarea class="form-textarea" id="f-notes" maxlength="2000" placeholder="選填備註…"></textarea>
+      </div>
+      <div id="modal-actions">
+        <button type="button" id="btn-delete-task" class="hidden">刪除</button>
+        <button type="button" id="btn-cancel-modal">取消</button>
+        <button type="submit" id="btn-save-task">儲存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Tag modal -->
+<div id="tag-modal-overlay" class="hidden">
+  <div id="tag-modal">
+    <h3 class="modal-title">標籤管理</h3>
+    <ul id="tag-list"></ul>
+    <div class="add-tag-row">
+      <input type="text" id="new-tag-input" placeholder="新標籤名稱…" maxlength="20">
+      <button class="btn-sm btn-primary" id="btn-create-tag">建立</button>
+    </div>
+    <div class="tag-modal-footer">
+      <button class="btn-sm btn-ghost" id="btn-close-tag-modal">關閉</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Firebase config (saved to localStorage per browser) ──
+const CONFIG_KEY = 'caltodo_firebase_config';
+
+function loadConfig() {
+  try { return JSON.parse(localStorage.getItem(CONFIG_KEY)) || null; } catch { return null; }
+}
+function saveConfig(cfg) {
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
+}
+
+// ── App State ──
+const state = {
+  data: { tasks: {}, tags: [] },
+  currentYear: 0,
+  currentMonth: 0,
+  selectedDate: null,
+  editingTaskId: null,
+  uid: null,
+  db: null
+};
+
+// ── Firebase init ──
+function initFirebase(cfg) {
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(cfg);
+    state.db = firebase.database();
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+// ── Cloud sync ──
+function dbRef() {
+  return state.db.ref(`users/${state.uid}/caltodo_data`);
+}
+
+function setSyncing(on) {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-text');
+  dot.classList.toggle('syncing', on);
+  txt.textContent = on ? '同步中…' : '已同步';
+}
+
+function saveData() {
+  if (!state.uid || !state.db) return;
+  setSyncing(true);
+  dbRef().set(state.data).then(() => setSyncing(false)).catch(() => setSyncing(false));
+}
+
+function startRealtimeSync() {
+  dbRef().on('value', snap => {
+    const val = snap.val();
+    if (val) {
+      state.data.tasks = val.tasks || {};
+      state.data.tags = val.tags || [];
+    } else {
+      state.data = { tasks: {}, tags: [] };
+    }
+    renderCalendar();
+    if (state.selectedDate) renderTaskList();
+    setSyncing(false);
+  });
+}
+
+// ── Auth ──
+function signIn() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  firebase.auth().signInWithPopup(provider).catch(e => {
+    const el = document.getElementById('login-error');
+    el.textContent = '登入失敗：' + e.message;
+    el.classList.remove('hidden');
+  });
+}
+
+function signOut() {
+  firebase.auth().signOut();
+}
+
+function onAuthChanged(user) {
+  if (user) {
+    state.uid = user.uid;
+    // Update header
+    document.getElementById('user-name').textContent = user.displayName || user.email;
+    const avatar = document.getElementById('user-avatar');
+    const fallback = document.getElementById('user-avatar-fallback');
+    if (user.photoURL) {
+      avatar.src = user.photoURL;
+      avatar.classList.remove('hidden');
+      fallback.classList.add('hidden');
+    } else {
+      fallback.textContent = (user.displayName || user.email || '?')[0].toUpperCase();
+    }
+    // Show app
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    // Init calendar
+    const now = new Date();
+    state.currentYear = now.getFullYear();
+    state.currentMonth = now.getMonth();
+    startRealtimeSync();
+  } else {
+    state.uid = null;
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('login-screen').classList.remove('hidden');
+  }
+}
+
+// ── Utilities ──
+function generateId() {
+  if (crypto && crypto.randomUUID) return crypto.randomUUID();
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+function todayStr() {
+  const d = new Date();
+  return toDateStr(d.getFullYear(), d.getMonth(), d.getDate());
+}
+function toDateStr(y, m, d) {
+  return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+function formatDateDisplay(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const weekdays = ['日','一','二','三','四','五','六'];
+  const w = new Date(y, m-1, d).getDay();
+  return `${y} 年 ${m} 月 ${d} 日（${weekdays[w]}）`;
+}
+function priorityOrder(p) { return p === '高' ? 0 : p === '中' ? 1 : 2; }
+function getTasksForDate(dateStr) {
+  return Object.values(state.data.tasks)
+    .filter(t => t.dueDate === dateStr)
+    .sort((a, b) => priorityOrder(a.priority) - priorityOrder(b.priority));
+}
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Calendar ──
+function renderCalendar() {
+  const grid = document.getElementById('calendar-grid');
+  const title = document.getElementById('month-title');
+  const { currentYear: y, currentMonth: m } = state;
+  const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  title.textContent = `${y} 年 ${monthNames[m]}`;
+  const firstDay = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const daysInPrev = new Date(y, m, 0).getDate();
+  const today = todayStr();
+  const total = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+  const cells = [];
+  for (let i = 0; i < total; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'day-cell';
+    let dateStr;
+    if (i < firstDay) {
+      const d = daysInPrev - firstDay + i + 1;
+      dateStr = toDateStr(m===0?y-1:y, m===0?11:m-1, d);
+      cell.classList.add('other-month');
+    } else if (i >= firstDay + daysInMonth) {
+      const d = i - firstDay - daysInMonth + 1;
+      dateStr = toDateStr(m===11?y+1:y, m===11?0:m+1, d);
+      cell.classList.add('other-month');
+    } else {
+      const d = i - firstDay + 1;
+      dateStr = toDateStr(y, m, d);
+      const dow = i % 7;
+      if (dow === 0) cell.classList.add('sunday');
+      if (dow === 6) cell.classList.add('saturday');
+      if (dateStr === today) cell.classList.add('today');
+      if (dateStr === state.selectedDate) cell.classList.add('selected');
+      cell.dataset.date = dateStr;
+      cell.addEventListener('click', () => openPanel(dateStr));
+    }
+    const [,,dayNum] = dateStr.split('-');
+    const numEl = document.createElement('div');
+    numEl.className = 'day-num';
+    numEl.textContent = String(Number(dayNum));
+    cell.appendChild(numEl);
+    if (!cell.classList.contains('other-month')) {
+      const tasks = getTasksForDate(dateStr);
+      if (tasks.length > 0) {
+        const dotsEl = document.createElement('div');
+        dotsEl.className = 'task-dots';
+        tasks.slice(0, 6).forEach(t => {
+          const dot = document.createElement('div');
+          dot.className = `dot dot-${t.priority==='高'?'high':t.priority==='中'?'mid':'low'}`;
+          dotsEl.appendChild(dot);
+        });
+        if (tasks.length > 6) {
+          const more = document.createElement('span');
+          more.className = 'dot-more';
+          more.textContent = `+${tasks.length - 6}`;
+          dotsEl.appendChild(more);
+        }
+        cell.appendChild(dotsEl);
+      }
+    }
+    cells.push(cell);
+  }
+  grid.innerHTML = '';
+  cells.forEach(c => grid.appendChild(c));
+}
+
+function prevMonth() {
+  if (state.currentMonth === 0) { state.currentMonth = 11; state.currentYear--; }
+  else state.currentMonth--;
+  renderCalendar();
+}
+function nextMonth() {
+  if (state.currentMonth === 11) { state.currentMonth = 0; state.currentYear++; }
+  else state.currentMonth++;
+  renderCalendar();
+}
+function goToday() {
+  const d = new Date();
+  state.currentYear = d.getFullYear();
+  state.currentMonth = d.getMonth();
+  renderCalendar();
+}
+
+// ── Side Panel ──
+function openPanel(dateStr) {
+  state.selectedDate = dateStr;
+  document.getElementById('panel-date-title').textContent = formatDateDisplay(dateStr);
+  renderTaskList();
+  document.getElementById('side-panel').classList.remove('hidden');
+  renderCalendar();
+}
+function closePanel() {
+  state.selectedDate = null;
+  document.getElementById('side-panel').classList.add('hidden');
+  renderCalendar();
+}
+function renderTaskList() {
+  const list = document.getElementById('task-list');
+  const tasks = getTasksForDate(state.selectedDate);
+  list.innerHTML = '';
+  if (tasks.length === 0) {
+    list.innerHTML = '<div class="empty-state"><span>📋</span>這天還沒有任務<br>點擊「新增任務」開始記錄</div>';
+    return;
+  }
+  tasks.forEach(task => {
+    const card = document.createElement('div');
+    card.className = `task-card priority-${task.priority} status-${task.status}`;
+    card.innerHTML = `
+      <div class="task-card-title">${escHtml(task.title)}</div>
+      <div class="task-card-meta">
+        <span class="badge badge-status-${task.status}">${task.status}</span>
+        <span class="badge badge-priority-${task.priority}">${task.priority}優先</span>
+        ${task.tags.map(t=>`<span class="badge badge-tag">${escHtml(t)}</span>`).join('')}
+      </div>`;
+    card.addEventListener('click', () => openEditModal(task.id));
+    list.appendChild(card);
+  });
+}
+
+// ── Task Modal ──
+function renderTagCheckboxes(selectedTags) {
+  const container = document.getElementById('f-tags-container');
+  container.innerHTML = '';
+  state.data.tags.forEach(tag => {
+    const label = document.createElement('label');
+    label.className = 'tag-check-label' + (selectedTags.includes(tag) ? ' checked' : '');
+    label.innerHTML = `<input type="checkbox" value="${escHtml(tag)}" ${selectedTags.includes(tag)?'checked':''}>${escHtml(tag)}`;
+    label.querySelector('input').addEventListener('change', e => { label.classList.toggle('checked', e.target.checked); });
+    container.appendChild(label);
+  });
+}
+function openAddModal(dateStr) {
+  state.editingTaskId = null;
+  document.getElementById('modal-title').textContent = '新增任務';
+  document.getElementById('f-title').value = '';
+  document.getElementById('f-status').value = '未完成';
+  document.getElementById('f-priority').value = '中';
+  document.getElementById('f-due').value = dateStr || '';
+  document.getElementById('f-notes').value = '';
+  document.getElementById('f-new-tag').value = '';
+  document.getElementById('btn-delete-task').classList.add('hidden');
+  renderTagCheckboxes([]);
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  setTimeout(() => document.getElementById('f-title').focus(), 50);
+}
+function openEditModal(taskId) {
+  const task = state.data.tasks[taskId];
+  if (!task) return;
+  state.editingTaskId = taskId;
+  document.getElementById('modal-title').textContent = '編輯任務';
+  document.getElementById('f-title').value = task.title;
+  document.getElementById('f-status').value = task.status;
+  document.getElementById('f-priority').value = task.priority;
+  document.getElementById('f-due').value = task.dueDate;
+  document.getElementById('f-notes').value = task.notes || '';
+  document.getElementById('f-new-tag').value = '';
+  document.getElementById('btn-delete-task').classList.remove('hidden');
+  renderTagCheckboxes(task.tags);
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+function getSelectedTags() {
+  return [...document.querySelectorAll('#f-tags-container input:checked')].map(cb => cb.value);
+}
+function saveTask(e) {
+  e.preventDefault();
+  const title = document.getElementById('f-title').value.trim();
+  if (!title) { document.getElementById('f-title').focus(); return; }
+  const now = Date.now();
+  const tags = getSelectedTags();
+  if (state.editingTaskId) {
+    const task = state.data.tasks[state.editingTaskId];
+    Object.assign(task, { title, status: document.getElementById('f-status').value, priority: document.getElementById('f-priority').value, dueDate: document.getElementById('f-due').value, notes: document.getElementById('f-notes').value.trim(), tags, updatedAt: now });
+  } else {
+    const id = generateId();
+    state.data.tasks[id] = { id, title, status: document.getElementById('f-status').value, priority: document.getElementById('f-priority').value, dueDate: document.getElementById('f-due').value, notes: document.getElementById('f-notes').value.trim(), tags, createdAt: now, updatedAt: now };
+  }
+  saveData();
+  closeModal();
+  renderCalendar();
+  if (state.selectedDate) renderTaskList();
+}
+function deleteTask() {
+  if (!state.editingTaskId) return;
+  if (!confirm('確定要刪除這個任務嗎？')) return;
+  delete state.data.tasks[state.editingTaskId];
+  saveData();
+  closeModal();
+  renderCalendar();
+  if (state.selectedDate) renderTaskList();
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.add('hidden');
+  state.editingTaskId = null;
+}
+
+// ── Tag Modal ──
+function openTagModal() { renderTagModal(); document.getElementById('tag-modal-overlay').classList.remove('hidden'); }
+function renderTagModal() {
+  const list = document.getElementById('tag-list');
+  list.innerHTML = '';
+  if (state.data.tags.length === 0) {
+    list.innerHTML = '<li style="color:var(--text-faint);font-size:0.85rem;padding:6px 0">尚無標籤，請新增</li>';
+    return;
+  }
+  state.data.tags.forEach(tag => {
+    const li = document.createElement('li');
+    li.className = 'tag-item';
+    li.innerHTML = `<span class="tag-item-name">${escHtml(tag)}</span><button class="tag-item-del" title="刪除">✕</button>`;
+    li.querySelector('button').addEventListener('click', () => {
+      if (confirm(`確定刪除標籤「${tag}」？`)) { deleteTag(tag); renderTagModal(); }
+    });
+    list.appendChild(li);
+  });
+}
+function addTag(name) {
+  name = name.trim();
+  if (!name || state.data.tags.map(t=>t.toLowerCase()).includes(name.toLowerCase())) return;
+  state.data.tags.push(name);
+  saveData();
+}
+function deleteTag(name) {
+  state.data.tags = state.data.tags.filter(t => t !== name);
+  Object.values(state.data.tasks).forEach(task => { task.tags = task.tags.filter(t => t !== name); });
+  saveData();
+}
+function closeTagModal() {
+  document.getElementById('tag-modal-overlay').classList.add('hidden');
+  if (state.selectedDate) renderTaskList();
+}
+function addTagInline() {
+  const input = document.getElementById('f-new-tag');
+  const name = input.value.trim();
+  if (!name) return;
+  addTag(name);
+  const selected = getSelectedTags();
+  if (!selected.includes(name)) selected.push(name);
+  renderTagCheckboxes(selected);
+  input.value = '';
+}
+
+// ── Init ──
+function initApp() {
+  document.getElementById('btn-prev').addEventListener('click', prevMonth);
+  document.getElementById('btn-next').addEventListener('click', nextMonth);
+  document.getElementById('btn-today').addEventListener('click', goToday);
+  document.getElementById('btn-close-panel').addEventListener('click', closePanel);
+  document.getElementById('btn-add-task').addEventListener('click', () => openAddModal(state.selectedDate));
+  document.getElementById('btn-manage-tags').addEventListener('click', openTagModal);
+  document.getElementById('btn-signout').addEventListener('click', signOut);
+  document.getElementById('task-form').addEventListener('submit', saveTask);
+  document.getElementById('btn-cancel-modal').addEventListener('click', closeModal);
+  document.getElementById('btn-delete-task').addEventListener('click', deleteTask);
+  document.getElementById('modal-overlay').addEventListener('click', e => { if (e.target===document.getElementById('modal-overlay')) closeModal(); });
+  document.getElementById('btn-add-tag-inline').addEventListener('click', addTagInline);
+  document.getElementById('f-new-tag').addEventListener('keydown', e => { if (e.key==='Enter'){e.preventDefault();addTagInline();} });
+  document.getElementById('btn-create-tag').addEventListener('click', () => {
+    const input = document.getElementById('new-tag-input');
+    addTag(input.value); input.value = ''; renderTagModal();
+  });
+  document.getElementById('new-tag-input').addEventListener('keydown', e => { if (e.key==='Enter'){e.preventDefault();document.getElementById('btn-create-tag').click();} });
+  document.getElementById('btn-close-tag-modal').addEventListener('click', closeTagModal);
+  document.getElementById('tag-modal-overlay').addEventListener('click', e => { if (e.target===document.getElementById('tag-modal-overlay')) closeTagModal(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      if (!document.getElementById('modal-overlay').classList.contains('hidden')) closeModal();
+      else if (!document.getElementById('tag-modal-overlay').classList.contains('hidden')) closeTagModal();
+      else if (!document.getElementById('side-panel').classList.contains('hidden')) closePanel();
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initApp();
+
+  // Setup screen
+  document.getElementById('btn-save-config').addEventListener('click', () => {
+    const cfg = {
+      apiKey: document.getElementById('cfg-apiKey').value.trim(),
+      authDomain: document.getElementById('cfg-authDomain').value.trim(),
+      databaseURL: document.getElementById('cfg-databaseURL').value.trim(),
+      projectId: document.getElementById('cfg-projectId').value.trim(),
+      appId: document.getElementById('cfg-appId').value.trim()
+    };
+    if (!cfg.apiKey || !cfg.authDomain || !cfg.databaseURL) {
+      const err = document.getElementById('config-error');
+      err.textContent = '請填入必要欄位（apiKey、authDomain、databaseURL）';
+      err.classList.remove('hidden');
+      return;
+    }
+    if (!initFirebase(cfg)) {
+      document.getElementById('config-error').textContent = '初始化失敗，請確認設定是否正確';
+      document.getElementById('config-error').classList.remove('hidden');
+      return;
+    }
+    saveConfig(cfg);
+    document.getElementById('setup-screen').classList.add('hidden');
+    firebase.auth().onAuthStateChanged(onAuthChanged);
+    document.getElementById('btn-signin').addEventListener('click', signIn);
+    document.getElementById('login-screen').classList.remove('hidden');
+  });
+
+  // Try saved config
+  const saved = loadConfig();
+  if (saved && initFirebase(saved)) {
+    firebase.auth().onAuthStateChanged(onAuthChanged);
+    document.getElementById('btn-signin').addEventListener('click', signIn);
+    document.getElementById('login-screen').classList.remove('hidden');
+  } else {
+    // Pre-fill if partial config exists
+    if (saved) {
+      Object.keys(saved).forEach(k => {
+        const el = document.getElementById('cfg-' + k);
+        if (el) el.value = saved[k] || '';
+      });
+    }
+    document.getElementById('setup-screen').classList.remove('hidden');
+  }
+});
+</script>
+</body>
+</html>
