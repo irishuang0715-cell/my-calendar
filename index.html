@@ -156,7 +156,7 @@ body {
 #calendar-section { flex: 1; padding: 16px; overflow: hidden; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 #weekday-headers { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding-bottom: 4px; }
 .weekday-label { text-align: center; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); padding: 4px 0; }
-.weekday-label:first-child { color: #ef4444; }
+.weekday-label:first-child { color: #3b82f6; }
 .weekday-label:last-child { color: #3b82f6; }
 #calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 1fr; gap: 4px; flex: 1; min-height: 0; }
 .day-cell {
@@ -170,7 +170,9 @@ body {
 .day-cell.selected { box-shadow: 0 0 0 2.5px var(--primary); border-color: var(--primary); }
 .day-num { font-size: 0.82rem; font-weight: 600; line-height: 1; margin-bottom: 5px; color: var(--text); }
 .day-cell.today .day-num { color: var(--primary); }
-.day-cell.sunday .day-num { color: #ef4444; }
+.day-cell.sunday { background: #f6f8ff; }
+.day-cell.sunday .day-num { color: #3b82f6; }
+.day-cell.saturday { background: #f6f8ff; }
 .day-cell.saturday .day-num { color: #3b82f6; }
 /* ── Task counts (replaces dots) ── */
 .task-counts { display: flex; gap: 3px; flex-wrap: wrap; margin-top: auto; padding-top: 2px; }
@@ -204,7 +206,9 @@ body {
   transition: box-shadow 0.15s, border-color 0.15s;
 }
 .week-cell.today { border-color: var(--primary); background: var(--primary-light); }
-.week-cell.sunday .day-num { color: #ef4444; }
+.week-cell.sunday { background: #f6f8ff; }
+.week-cell.sunday .day-num { color: #3b82f6; }
+.week-cell.saturday { background: #f6f8ff; }
 .week-cell.saturday .day-num { color: #3b82f6; }
 .week-cell.holiday { background: #fff5f5; }
 .week-cell.leave-day { background: #f0fdf4; }
