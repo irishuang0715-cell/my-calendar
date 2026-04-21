@@ -639,6 +639,8 @@ function startRealtimeSync() {
     const val = snap.val();
     if (val) {
       state.data.tasks = val.tasks || {};
+      // Firebase removes empty arrays; restore tags field on all tasks
+      Object.values(state.data.tasks).forEach(t => { if (!Array.isArray(t.tags)) t.tags = []; });
       state.data.tags = val.tags || [];
       state.data.leaves = val.leaves || {};
     } else {
@@ -1053,7 +1055,7 @@ function renderTaskList() {
           <div class="task-card-meta">
             <span class="badge badge-status-${task.status}">${task.status}</span>
             <span class="badge badge-priority-${task.priority}">${task.priority}優先</span>
-            ${task.tags.map(t=>`<span class="badge badge-tag">${escHtml(t)}</span>`).join('')}
+            ${(task.tags||[]).map(t=>`<span class="badge badge-tag">${escHtml(t)}</span>`).join('')}
           </div>
         </div>
       </div>`;
