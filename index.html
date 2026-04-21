@@ -282,21 +282,33 @@ body {
   transition: transform 0.25s ease;
 }
 #side-panel.hidden { transform: translateX(320px); pointer-events: none; border-left-color: transparent; }
-#panel-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+#panel-header { padding: 12px 16px 10px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
 #panel-header-top { display: flex; align-items: center; gap: 8px; }
-#panel-date-title { font-size: 1rem; font-weight: 700; flex: 1; white-space: nowrap; }
-#leave-row { display: flex; align-items: center; gap: 6px; padding-top: 4px; border-top: 1px solid var(--border); }
-#leave-type-select { font-size: 0.78rem; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 7px; outline: none; flex: 1; background: var(--surface); color: var(--text); }
-#leave-type-select:focus { border-color: var(--primary); }
-#btn-set-leave { padding: 4px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface2); font-size: 0.78rem; font-weight: 600; cursor: pointer; white-space: nowrap; color: var(--text-muted); transition: background 0.12s; }
-#btn-set-leave:hover { background: #dcfce7; color: #16a34a; border-color: #86efac; }
-#btn-set-leave.has-leave { background: #dcfce7; color: #16a34a; border-color: #86efac; }
-#btn-cancel-leave { padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid #fecaca; background: #fef2f2; font-size: 0.78rem; font-weight: 600; cursor: pointer; color: #b91c1c; transition: background 0.12s; }
-#btn-cancel-leave:hover { background: #fee2e2; }
-#btn-add-task { padding: 6px 12px; background: var(--primary); color: #fff; border: none; border-radius: 20px; cursor: pointer; font-size: 0.82rem; font-weight: 600; white-space: nowrap; }
-#btn-add-task:hover { opacity: 0.85; }
-#btn-close-panel { width: 28px; height: 28px; border: none; background: var(--surface2); border-radius: 50%; cursor: pointer; font-size: 1rem; color: var(--text-muted); display: flex; align-items: center; justify-content: center; }
+#panel-date-title { font-size: 1rem; font-weight: 700; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#btn-close-panel { width: 28px; height: 28px; border: none; background: var(--surface2); border-radius: 50%; cursor: pointer; font-size: 1rem; color: var(--text-muted); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 #btn-close-panel:hover { background: var(--border); }
+#panel-action-btns { display: flex; gap: 6px; }
+.panel-action-btn {
+  flex: 1; padding: 8px 4px; border: none; border-radius: var(--radius-sm);
+  cursor: pointer; font-size: 0.78rem; font-weight: 700;
+  transition: opacity 0.15s, filter 0.15s; white-space: nowrap; text-align: center;
+}
+.panel-action-btn:hover { opacity: 0.82; }
+.btn-action-task { background: var(--primary); color: #fff; }
+.btn-action-leave { background: #16a34a; color: #fff; }
+.btn-action-leave.has-leave { background: #15803d; }
+.btn-action-meeting { background: #7c3aed; color: #fff; }
+#leave-selector {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 10px; background: #f0fdf4;
+  border: 1px solid #86efac; border-radius: var(--radius-sm);
+}
+#leave-type-select { font-size: 0.78rem; border: 1px solid #86efac; border-radius: var(--radius-sm); padding: 5px 7px; outline: none; flex: 1; background: var(--surface); color: var(--text); }
+#leave-type-select:focus { border-color: #16a34a; }
+#btn-confirm-leave { padding: 5px 11px; background: #16a34a; color: #fff; border: none; border-radius: var(--radius-sm); font-size: 0.78rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+#btn-confirm-leave:hover { opacity: 0.85; }
+#btn-remove-leave { padding: 5px 9px; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: var(--radius-sm); font-size: 0.78rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+#btn-remove-leave:hover { background: #fee2e2; }
 #task-list { flex: 1; min-height: 0; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 .empty-state { text-align: center; color: var(--text-faint); font-size: 0.88rem; margin-top: 40px; line-height: 1.8; }
 .empty-state span { font-size: 1.8rem; display: block; margin-bottom: 8px; }
@@ -472,10 +484,14 @@ body {
       <div id="panel-header">
         <div id="panel-header-top">
           <h2 id="panel-date-title"></h2>
-          <button id="btn-add-task">＋ 新增任務</button>
           <button id="btn-close-panel">✕</button>
         </div>
-        <div id="leave-row">
+        <div id="panel-action-btns">
+          <button class="panel-action-btn btn-action-task" id="btn-panel-add-task">＋ 新增任務</button>
+          <button class="panel-action-btn btn-action-leave" id="btn-panel-add-leave">🌿 新增休假</button>
+          <button class="panel-action-btn btn-action-meeting" id="btn-panel-add-meeting">🗓 新增會議</button>
+        </div>
+        <div id="leave-selector" class="hidden">
           <select id="leave-type-select">
             <option value="">── 選擇假別 ──</option>
             <option value="年假">年假</option>
@@ -485,8 +501,8 @@ body {
             <option value="特休">特休</option>
             <option value="補休">補休</option>
           </select>
-          <button id="btn-set-leave">🌿 標記休假</button>
-          <button id="btn-cancel-leave" class="hidden">✕ 取消</button>
+          <button id="btn-confirm-leave">確認</button>
+          <button id="btn-remove-leave" class="hidden">移除</button>
         </div>
       </div>
       <div id="task-list"></div>
@@ -1104,19 +1120,23 @@ function openPanel(dateStr) {
 }
 function updateLeaveUI(dateStr) {
   const leaveType = (state.data.leaves && state.data.leaves[dateStr]) || '';
-  const sel = document.getElementById('leave-type-select');
-  const btnSet = document.getElementById('btn-set-leave');
-  const btnCancel = document.getElementById('btn-cancel-leave');
-  sel.value = leaveType;
+  const btnLeave = document.getElementById('btn-panel-add-leave');
+  document.getElementById('leave-type-select').value = leaveType;
   if (leaveType) {
-    btnSet.textContent = '🌿 ' + leaveType;
-    btnSet.classList.add('has-leave');
-    btnCancel.classList.remove('hidden');
+    btnLeave.textContent = '🌿 ' + leaveType;
+    btnLeave.classList.add('has-leave');
+    document.getElementById('btn-remove-leave').classList.remove('hidden');
   } else {
-    btnSet.textContent = '🌿 標記休假';
-    btnSet.classList.remove('has-leave');
-    btnCancel.classList.add('hidden');
+    btnLeave.textContent = '🌿 新增休假';
+    btnLeave.classList.remove('has-leave');
+    document.getElementById('btn-remove-leave').classList.add('hidden');
   }
+  // Always collapse the selector when panel re-renders
+  document.getElementById('leave-selector').classList.add('hidden');
+}
+function toggleLeaveSelector() {
+  const sel = document.getElementById('leave-selector');
+  sel.classList.toggle('hidden');
 }
 function setLeave() {
   const dateStr = state.selectedDate;
@@ -1136,7 +1156,6 @@ function cancelLeave() {
   const dateStr = state.selectedDate;
   if (!dateStr || !state.data.leaves) return;
   delete state.data.leaves[dateStr];
-  document.getElementById('leave-type-select').value = '';
   saveData();
   updateLeaveUI(dateStr);
   renderCalendar();
@@ -1506,13 +1525,15 @@ function initApp() {
   document.getElementById('btn-next').addEventListener('click', nextMonth);
   document.getElementById('btn-today').addEventListener('click', goToday);
   document.getElementById('btn-close-panel').addEventListener('click', closePanel);
-  document.getElementById('btn-add-task').addEventListener('click', () => openAddModal(state.selectedDate));
+  document.getElementById('btn-panel-add-task').addEventListener('click', () => openAddModal(state.selectedDate));
+  document.getElementById('btn-panel-add-leave').addEventListener('click', toggleLeaveSelector);
+  document.getElementById('btn-panel-add-meeting').addEventListener('click', () => openAddMeetingModal(state.selectedDate));
+  document.getElementById('btn-confirm-leave').addEventListener('click', setLeave);
+  document.getElementById('btn-remove-leave').addEventListener('click', cancelLeave);
   document.getElementById('btn-manage-tags').addEventListener('click', openTagModal);
   document.getElementById('btn-signout').addEventListener('click', signOut);
   document.getElementById('btn-view-month').addEventListener('click', () => switchView('month'));
   document.getElementById('btn-view-week').addEventListener('click', () => switchView('week'));
-  document.getElementById('btn-set-leave').addEventListener('click', setLeave);
-  document.getElementById('btn-cancel-leave').addEventListener('click', cancelLeave);
   document.getElementById('meeting-form').addEventListener('submit', saveMeeting);
   document.getElementById('btn-cancel-meeting-modal').addEventListener('click', closeMeetingModal);
   document.getElementById('btn-delete-meeting').addEventListener('click', deleteMeeting);
