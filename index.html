@@ -584,6 +584,9 @@ function saveConfig(cfg) {
   localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
 }
 
+// ── Drag state (module-level so list container can access it) ──
+let dragSrcId = null;
+
 // ── App State ──
 const state = {
   data: { tasks: {}, tags: [], leaves: {} },
@@ -1032,8 +1035,6 @@ function renderTaskList() {
     .sort((a, b) => statusOrder(a.status) - statusOrder(b.status) || (a.order ?? a.createdAt) - (b.order ?? b.createdAt));
   const doneTasks = allTasks.filter(t => t.status === '已完成');
 
-  let dragSrcId = null;
-
   function renderCards(taskArr) {
     taskArr.forEach(task => {
     const card = document.createElement('div');
@@ -1090,6 +1091,27 @@ function renderTaskList() {
   }
 
   renderCards(activeTasks);
+
+  // ── List-level drop zone: catches drops in empty space (fixes last-item drag) ──
+  list.ondragover = e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+  list.ondrop = e => {
+    // If dropped directly on a card, the card's own handler takes over
+    if (e.target.closest('.task-card')) return;
+    if (!dragSrcId) return;
+    e.preventDefault();
+    // Find last active card and insert source after it
+    const activeCards = [...list.querySelectorAll('.task-card')].filter(c => !c.classList.contains('status-已完成'));
+    if (!activeCards.length) return;
+    const lastCard = activeCards[activeCards.length - 1];
+    const lastTaskId = lastCard.dataset.taskId;
+    if (dragSrcId !== lastTaskId) {
+      reorderTasks(dragSrcId, lastTaskId, false);
+    }
+    list.querySelectorAll('.task-card').forEach(c => c.classList.remove('drag-over-top', 'drag-over-bottom'));
+  };
 
   if (doneTasks.length > 0) {
     const divider = document.createElement('div');
