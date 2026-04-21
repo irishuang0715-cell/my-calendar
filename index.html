@@ -200,6 +200,48 @@ body {
 .btn-nav-text:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
 .btn-nav-text.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 #calendar-grid.week-view { grid-auto-rows: 1fr; }
+/* ── Meeting styles ── */
+.count-meeting { background: #f5f3ff; color: #7c3aed; }
+.meeting-card {
+  background: #f5f3ff; border: 1px solid #ddd6fe; border-left: 4px solid #7c3aed;
+  border-radius: var(--radius-sm); padding: 9px 12px; cursor: pointer;
+  transition: box-shadow 0.15s; display: flex; flex-direction: column; gap: 3px;
+}
+.meeting-card:hover { box-shadow: var(--shadow); }
+.meeting-card-title { font-size: 0.9rem; font-weight: 600; word-break: break-all; }
+.meeting-card-time { font-size: 0.78rem; color: #7c3aed; font-weight: 600; }
+.meeting-card-meta { font-size: 0.75rem; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 8px; }
+.panel-section-header {
+  font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: 0.04em; padding: 10px 4px 6px; display: flex; align-items: center;
+  justify-content: space-between; border-bottom: 1px solid var(--border); margin-bottom: 6px; flex-shrink: 0;
+}
+.btn-add-meeting {
+  padding: 3px 10px; background: #7c3aed; color: #fff;
+  border: none; border-radius: 20px; cursor: pointer;
+  font-size: 0.72rem; font-weight: 600; white-space: nowrap; text-transform: none; letter-spacing: 0;
+}
+.btn-add-meeting:hover { opacity: 0.85; }
+.panel-tasks-header {
+  font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: 0.04em; padding: 10px 4px 6px; display: flex; align-items: center;
+  justify-content: space-between; border-bottom: 1px solid var(--border); margin-bottom: 6px; flex-shrink: 0;
+}
+.week-meeting-item {
+  font-size: 0.76rem; padding: 3px 7px; border-radius: 4px;
+  border-left: 3px solid #7c3aed; cursor: pointer;
+  background: #f5f3ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: opacity 0.12s; flex-shrink: 0;
+}
+.week-meeting-item:hover { opacity: 0.75; }
+#meeting-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
+#meeting-modal { background: var(--surface); border-radius: 14px; padding: 24px; width: min(500px, 100%); max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-md); }
+#meeting-modal-actions { display: flex; gap: 8px; justify-content: flex-end; padding-top: 6px; border-top: 1px solid var(--border); margin-top: 6px; }
+#meeting-modal-actions button { padding: 8px 18px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-size: 0.88rem; font-weight: 600; }
+#btn-save-meeting { background: #7c3aed; color: #fff; }
+#btn-save-meeting:hover { opacity: 0.85; }
+#btn-cancel-meeting-modal { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border) !important; }
+#btn-delete-meeting { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca !important; margin-right: auto; }
 .week-cell {
   background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-sm);
   padding: 6px 7px; display: flex; flex-direction: column; overflow: hidden; cursor: default;
@@ -520,6 +562,50 @@ body {
   </div>
 </div>
 
+<!-- Meeting modal -->
+<div id="meeting-modal-overlay" class="hidden">
+  <div id="meeting-modal">
+    <h3 class="modal-title" id="meeting-modal-title">新增會議</h3>
+    <form id="meeting-form" autocomplete="off">
+      <div class="form-group">
+        <label class="form-label">會議標題 <span class="form-required">*</span></label>
+        <input class="form-input" id="m-title" type="text" maxlength="100" placeholder="輸入會議標題…" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">日期</label>
+          <input class="form-input" id="m-date" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">開始時間</label>
+          <input class="form-input" id="m-start" type="time">
+        </div>
+        <div class="form-group">
+          <label class="form-label">結束時間</label>
+          <input class="form-input" id="m-end" type="time">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">地點</label>
+        <input class="form-input" id="m-location" type="text" maxlength="100" placeholder="會議室、線上連結…">
+      </div>
+      <div class="form-group">
+        <label class="form-label">與會者</label>
+        <input class="form-input" id="m-attendees" type="text" maxlength="200" placeholder="王小明、李小華…">
+      </div>
+      <div class="form-group">
+        <label class="form-label">備註</label>
+        <textarea class="form-textarea" id="m-notes" maxlength="2000" placeholder="議程、討論重點…"></textarea>
+      </div>
+      <div id="meeting-modal-actions">
+        <button type="button" id="btn-delete-meeting" class="hidden">刪除</button>
+        <button type="button" id="btn-cancel-meeting-modal">取消</button>
+        <button type="submit" id="btn-save-meeting">儲存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
 // ── 國定假日（參考人事行政總處，每年可更新）──
 const HOLIDAYS = {
@@ -593,7 +679,7 @@ let dragSrcId = null;
 
 // ── App State ──
 const state = {
-  data: { tasks: {}, tags: [], leaves: {} },
+  data: { tasks: {}, tags: [], leaves: {}, meetings: {} },
   currentYear: 0,
   currentMonth: 0,
   selectedDate: null,
@@ -643,8 +729,9 @@ function startRealtimeSync() {
       Object.values(state.data.tasks).forEach(t => { if (!Array.isArray(t.tags)) t.tags = []; });
       state.data.tags = val.tags || [];
       state.data.leaves = val.leaves || {};
+      state.data.meetings = val.meetings || {};
     } else {
-      state.data = { tasks: {}, tags: [], leaves: {} };
+      state.data = { tasks: {}, tags: [], leaves: {}, meetings: {} };
     }
     renderCalendar();
     if (state.selectedDate) renderTaskList();
@@ -723,6 +810,17 @@ function getTasksForDate(dateStr) {
     .filter(t => t.dueDate === dateStr)
     .sort((a, b) => (a.order ?? a.createdAt) - (b.order ?? b.createdAt));
 }
+function getMeetingsForDate(dateStr) {
+  return Object.values(state.data.meetings || {})
+    .filter(m => m.date === dateStr)
+    .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || '') || a.createdAt - b.createdAt);
+}
+function formatTime(t) { return t ? t.slice(0,5) : ''; }
+function formatTimeRange(start, end) {
+  if (!start && !end) return '';
+  if (start && end) return `${formatTime(start)} – ${formatTime(end)}`;
+  return formatTime(start) || formatTime(end);
+}
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -760,16 +858,17 @@ function addCellDropEvents(cell, dateStr) {
 // ── helper: render task counts badge for month view ──
 function renderTaskCounts(cell, dateStr) {
   const tasks = getTasksForDate(dateStr);
-  if (tasks.length === 0) return;
+  const meetingCount = getMeetingsForDate(dateStr).length;
   const active = tasks.filter(t => t.status !== '已完成');
   const done   = tasks.filter(t => t.status === '已完成');
   const high = active.filter(t => t.priority === '高').length;
   const mid  = active.filter(t => t.priority === '中').length;
   const low  = active.filter(t => t.priority === '低').length;
   const doneN = done.length;
-  if (!high && !mid && !low && !doneN) return;
+  if (!high && !mid && !low && !doneN && !meetingCount) return;
   const el = document.createElement('div');
   el.className = 'task-counts';
+  if (meetingCount) el.innerHTML += `<span class="count-badge count-meeting">🗓 ${meetingCount}</span>`;
   if (high) el.innerHTML += `<span class="count-badge count-high">高 ${high}</span>`;
   if (mid)  el.innerHTML += `<span class="count-badge count-mid">中 ${mid}</span>`;
   if (low)  el.innerHTML += `<span class="count-badge count-low">低 ${low}</span>`;
@@ -885,6 +984,17 @@ function renderWeekView() {
     // Task list
     const taskListEl = document.createElement('div');
     taskListEl.className = 'week-task-list';
+    // Meetings first
+    getMeetingsForDate(dateStr).forEach(m => {
+      const item = document.createElement('div');
+      item.className = 'week-meeting-item';
+      const timeStr = formatTimeRange(m.startTime, m.endTime);
+      item.title = m.title + (timeStr ? ' ' + timeStr : '');
+      item.textContent = (timeStr ? timeStr + ' ' : '') + m.title;
+      item.addEventListener('click', e => { e.stopPropagation(); openEditMeetingModal(m.id); });
+      taskListEl.appendChild(item);
+    });
+    // Tasks
     const tasks = getTasksForDate(dateStr).sort((a, b) => {
       if (a.status === '已完成' && b.status !== '已完成') return 1;
       if (a.status !== '已完成' && b.status === '已完成') return -1;
@@ -899,19 +1009,30 @@ function renderWeekView() {
       item.addEventListener('click', e => { e.stopPropagation(); openEditModal(task.id); });
       item.addEventListener('dragstart', e => {
         e.dataTransfer.setData('taskId', task.id);
-        e.dataTransfer.setData('taskid', task.id); // lowercase for dragover check
+        e.dataTransfer.setData('taskid', task.id);
         e.dataTransfer.effectAllowed = 'move';
       });
       taskListEl.appendChild(item);
     });
     cell.appendChild(taskListEl);
-    // Add task button
+    // Add buttons row
+    const addRow = document.createElement('div');
+    addRow.style.cssText = 'display:flex;gap:4px;flex-shrink:0;';
+    const addMeetBtn = document.createElement('div');
+    addMeetBtn.className = 'week-add-btn';
+    addMeetBtn.style.cssText = 'flex:1;color:#7c3aed;';
+    addMeetBtn.textContent = '🗓';
+    addMeetBtn.title = '新增會議';
+    addMeetBtn.addEventListener('click', e => { e.stopPropagation(); openAddMeetingModal(dateStr); });
     const addBtn = document.createElement('div');
     addBtn.className = 'week-add-btn';
-    addBtn.textContent = '＋ 新增';
+    addBtn.style.cssText = 'flex:2;';
+    addBtn.textContent = '＋ 新增任務';
     addBtn.title = '新增任務';
     addBtn.addEventListener('click', e => { e.stopPropagation(); openAddModal(dateStr); });
-    cell.appendChild(addBtn);
+    addRow.appendChild(addMeetBtn);
+    addRow.appendChild(addBtn);
+    cell.appendChild(addRow);
     // Drag-drop
     addCellDropEvents(cell, dateStr);
     // Double-click fallback
@@ -1027,12 +1148,129 @@ function closePanel() {
 }
 function statusOrder(s) { return s === '進行中' ? 0 : s === '未完成' ? 1 : s === '待確認' ? 2 : 3; }
 
+// ── Meeting Panel ──
+function renderMeetingList(dateStr, container) {
+  const meetings = getMeetingsForDate(dateStr);
+  // Section header
+  const header = document.createElement('div');
+  header.className = 'panel-section-header';
+  header.innerHTML = `<span>📅 會議</span>`;
+  const addBtn = document.createElement('button');
+  addBtn.className = 'btn-add-meeting';
+  addBtn.textContent = '＋ 新增會議';
+  addBtn.addEventListener('click', () => openAddMeetingModal(dateStr));
+  header.appendChild(addBtn);
+  container.appendChild(header);
+  // Meeting cards
+  meetings.forEach(m => {
+    const card = document.createElement('div');
+    card.className = 'meeting-card';
+    const timeStr = formatTimeRange(m.startTime, m.endTime);
+    card.innerHTML = `
+      <div class="meeting-card-title">${escHtml(m.title)}</div>
+      ${timeStr ? `<div class="meeting-card-time">🕐 ${escHtml(timeStr)}</div>` : ''}
+      <div class="meeting-card-meta">
+        ${m.location ? `<span>📍 ${escHtml(m.location)}</span>` : ''}
+        ${m.attendees ? `<span>👥 ${escHtml(m.attendees)}</span>` : ''}
+      </div>`;
+    card.addEventListener('click', () => openEditMeetingModal(m.id));
+    container.appendChild(card);
+  });
+}
+
+// ── Meeting Modal ──
+let editingMeetingId = null;
+function openAddMeetingModal(dateStr) {
+  editingMeetingId = null;
+  document.getElementById('meeting-modal-title').textContent = '新增會議';
+  document.getElementById('m-title').value = '';
+  document.getElementById('m-date').value = dateStr || '';
+  document.getElementById('m-start').value = '';
+  document.getElementById('m-end').value = '';
+  document.getElementById('m-location').value = '';
+  document.getElementById('m-attendees').value = '';
+  document.getElementById('m-notes').value = '';
+  document.getElementById('btn-delete-meeting').classList.add('hidden');
+  document.getElementById('meeting-modal-overlay').classList.remove('hidden');
+  setTimeout(() => document.getElementById('m-title').focus(), 50);
+}
+function openEditMeetingModal(meetingId) {
+  const m = state.data.meetings[meetingId];
+  if (!m) return;
+  editingMeetingId = meetingId;
+  document.getElementById('meeting-modal-title').textContent = '編輯會議';
+  document.getElementById('m-title').value = m.title;
+  document.getElementById('m-date').value = m.date;
+  document.getElementById('m-start').value = m.startTime || '';
+  document.getElementById('m-end').value = m.endTime || '';
+  document.getElementById('m-location').value = m.location || '';
+  document.getElementById('m-attendees').value = m.attendees || '';
+  document.getElementById('m-notes').value = m.notes || '';
+  document.getElementById('btn-delete-meeting').classList.remove('hidden');
+  document.getElementById('meeting-modal-overlay').classList.remove('hidden');
+}
+function saveMeeting(e) {
+  e.preventDefault();
+  const title = document.getElementById('m-title').value.trim();
+  if (!title) { document.getElementById('m-title').focus(); return; }
+  const now = Date.now();
+  const data = {
+    title,
+    date: document.getElementById('m-date').value,
+    startTime: document.getElementById('m-start').value,
+    endTime: document.getElementById('m-end').value,
+    location: document.getElementById('m-location').value.trim(),
+    attendees: document.getElementById('m-attendees').value.trim(),
+    notes: document.getElementById('m-notes').value.trim(),
+  };
+  if (editingMeetingId) {
+    Object.assign(state.data.meetings[editingMeetingId], data, { updatedAt: now });
+  } else {
+    const id = generateId();
+    state.data.meetings[id] = { id, ...data, createdAt: now, updatedAt: now };
+  }
+  saveData();
+  closeMeetingModal();
+  renderCalendar();
+  if (state.selectedDate) renderTaskList();
+}
+function deleteMeeting() {
+  if (!editingMeetingId) return;
+  if (!confirm('確定要刪除這個會議嗎？')) return;
+  delete state.data.meetings[editingMeetingId];
+  saveData();
+  closeMeetingModal();
+  renderCalendar();
+  if (state.selectedDate) renderTaskList();
+}
+function closeMeetingModal() {
+  document.getElementById('meeting-modal-overlay').classList.add('hidden');
+  editingMeetingId = null;
+}
+
 function renderTaskList() {
   const list = document.getElementById('task-list');
   const allTasks = getTasksForDate(state.selectedDate);
   list.innerHTML = '';
+  // ── Meetings section ──
+  renderMeetingList(state.selectedDate, list);
+  // ── Tasks section header ──
+  const tasksHeader = document.createElement('div');
+  tasksHeader.className = 'panel-section-header';
+  tasksHeader.innerHTML = '<span>✓ 任務</span>';
+  list.appendChild(tasksHeader);
   if (allTasks.length === 0) {
-    list.innerHTML = '<div class="empty-state"><span>📋</span>這天還沒有任務<br>點擊「新增任務」開始記錄</div>';
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.innerHTML = '<span>📋</span>這天還沒有任務<br>點擊「新增任務」開始記錄';
+    list.appendChild(empty);
+    // still need to set up drag handlers for list
+    list.ondragover = e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
+    list.ondrop = e => {
+      if (e.target.closest('.task-card')) return;
+      if (!dragSrcId) return;
+      e.preventDefault();
+    };
     return;
   }
 
@@ -1275,6 +1513,10 @@ function initApp() {
   document.getElementById('btn-view-week').addEventListener('click', () => switchView('week'));
   document.getElementById('btn-set-leave').addEventListener('click', setLeave);
   document.getElementById('btn-cancel-leave').addEventListener('click', cancelLeave);
+  document.getElementById('meeting-form').addEventListener('submit', saveMeeting);
+  document.getElementById('btn-cancel-meeting-modal').addEventListener('click', closeMeetingModal);
+  document.getElementById('btn-delete-meeting').addEventListener('click', deleteMeeting);
+  document.getElementById('meeting-modal-overlay').addEventListener('click', e => { if (e.target === document.getElementById('meeting-modal-overlay')) closeMeetingModal(); });
   document.getElementById('task-form').addEventListener('submit', saveTask);
   document.getElementById('btn-cancel-modal').addEventListener('click', closeModal);
   document.getElementById('btn-delete-task').addEventListener('click', deleteTask);
@@ -1291,6 +1533,7 @@ function initApp() {
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       if (!document.getElementById('modal-overlay').classList.contains('hidden')) closeModal();
+      else if (!document.getElementById('meeting-modal-overlay').classList.contains('hidden')) closeMeetingModal();
       else if (!document.getElementById('tag-modal-overlay').classList.contains('hidden')) closeTagModal();
       else if (!document.getElementById('side-panel').classList.contains('hidden')) closePanel();
     }
