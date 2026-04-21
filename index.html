@@ -172,15 +172,61 @@ body {
 .day-cell.today .day-num { color: var(--primary); }
 .day-cell.sunday .day-num { color: #ef4444; }
 .day-cell.saturday .day-num { color: #3b82f6; }
-.task-dots { display: flex; flex-wrap: wrap; gap: 3px; margin-top: auto; }
-.dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.dot-high { background: var(--priority-high); }
-.dot-mid  { background: var(--priority-mid); }
-.dot-low  { background: var(--priority-low); }
-.dot-more { font-size: 0.6rem; color: var(--text-muted); line-height: 7px; }
+/* ── Task counts (replaces dots) ── */
+.task-counts { display: flex; gap: 3px; flex-wrap: wrap; margin-top: auto; padding-top: 2px; }
+.count-badge { font-size: 0.63rem; font-weight: 700; padding: 1px 5px; border-radius: 10px; line-height: 1.5; white-space: nowrap; }
+.count-high { background: #fef2f2; color: var(--priority-high); }
+.count-mid  { background: #fff7ed; color: #c2410c; }
+.count-low  { background: #eff6ff; color: var(--priority-low); }
+.count-done { background: #f0fdf4; color: #16a34a; font-weight: 500; }
 .day-cell.holiday { background: #fff5f5; }
 .day-cell.holiday.today { background: #fce7f3; }
 .holiday-label { font-size: 0.6rem; color: #ef4444; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+/* ── Leave / Vacation ── */
+.day-cell.leave-day { background: #f0fdf4; }
+.day-cell.leave-day.today { background: #dcfce7; }
+.leave-label { font-size: 0.6rem; color: #16a34a; font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+/* ── Drag-to-date target ── */
+.day-cell.drag-target { box-shadow: 0 0 0 2.5px var(--primary) !important; border-color: var(--primary) !important; background: var(--primary-light) !important; }
+
+/* ── Week view ── */
+.btn-nav-text {
+  padding: 5px 14px; border: 1px solid var(--border); border-radius: 20px;
+  background: var(--surface); cursor: pointer; font-size: 0.82rem; color: var(--text-muted);
+  transition: background 0.15s, color 0.15s, border-color 0.15s; white-space: nowrap;
+}
+.btn-nav-text:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
+.btn-nav-text.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+#calendar-grid.week-view { grid-auto-rows: 1fr; }
+.week-cell {
+  background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  padding: 6px 7px; display: flex; flex-direction: column; overflow: hidden; cursor: default;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.week-cell.today { border-color: var(--primary); background: var(--primary-light); }
+.week-cell.sunday .day-num { color: #ef4444; }
+.week-cell.saturday .day-num { color: #3b82f6; }
+.week-cell.holiday { background: #fff5f5; }
+.week-cell.leave-day { background: #f0fdf4; }
+.week-cell.drag-target { box-shadow: 0 0 0 2.5px var(--primary) !important; border-color: var(--primary) !important; background: var(--primary-light) !important; }
+.week-task-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
+.week-task-item {
+  font-size: 0.76rem; padding: 3px 7px; border-radius: 4px;
+  border-left: 3px solid; cursor: pointer; background: var(--surface2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: opacity 0.12s;
+}
+.week-task-item:hover { opacity: 0.75; }
+.week-task-item.status-已完成 { opacity: 0.5; text-decoration: line-through; }
+.week-task-item.priority-高 { border-left-color: var(--priority-high); }
+.week-task-item.priority-中 { border-left-color: var(--priority-mid); }
+.week-task-item.priority-低 { border-left-color: var(--priority-low); }
+.week-add-btn {
+  font-size: 0.72rem; color: var(--text-faint); text-align: center;
+  padding: 3px; cursor: pointer; border-radius: 4px; flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
+}
+.week-add-btn:hover { background: var(--primary-light); color: var(--primary); }
 
 /* ── Side panel ── */
 #side-panel {
@@ -190,8 +236,17 @@ body {
   transition: transform 0.25s ease;
 }
 #side-panel.hidden { transform: translateX(320px); pointer-events: none; border-left-color: transparent; }
-#panel-header { padding: 16px 16px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+#panel-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+#panel-header-top { display: flex; align-items: center; gap: 8px; }
 #panel-date-title { font-size: 1rem; font-weight: 700; flex: 1; white-space: nowrap; }
+#leave-row { display: flex; align-items: center; gap: 6px; padding-top: 4px; border-top: 1px solid var(--border); }
+#leave-type-select { font-size: 0.78rem; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 7px; outline: none; flex: 1; background: var(--surface); color: var(--text); }
+#leave-type-select:focus { border-color: var(--primary); }
+#btn-set-leave { padding: 4px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface2); font-size: 0.78rem; font-weight: 600; cursor: pointer; white-space: nowrap; color: var(--text-muted); transition: background 0.12s; }
+#btn-set-leave:hover { background: #dcfce7; color: #16a34a; border-color: #86efac; }
+#btn-set-leave.has-leave { background: #dcfce7; color: #16a34a; border-color: #86efac; }
+#btn-cancel-leave { padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid #fecaca; background: #fef2f2; font-size: 0.78rem; font-weight: 600; cursor: pointer; color: #b91c1c; transition: background 0.12s; }
+#btn-cancel-leave:hover { background: #fee2e2; }
 #btn-add-task { padding: 6px 12px; background: var(--primary); color: #fff; border: none; border-radius: 20px; cursor: pointer; font-size: 0.82rem; font-weight: 600; white-space: nowrap; }
 #btn-add-task:hover { opacity: 0.85; }
 #btn-close-panel { width: 28px; height: 28px; border: none; background: var(--surface2); border-radius: 50%; cursor: pointer; font-size: 1rem; color: var(--text-muted); display: flex; align-items: center; justify-content: center; }
@@ -346,6 +401,8 @@ body {
     <h1 id="month-title"></h1>
     <button class="btn-nav" id="btn-next">&#8250;</button>
     <button id="btn-today">今天</button>
+    <button id="btn-view-month" class="btn-nav-text active">月</button>
+    <button id="btn-view-week" class="btn-nav-text">週</button>
     <button id="btn-manage-tags">標籤管理</button>
     <div id="user-info">
       <div id="user-avatar-fallback"></div>
@@ -367,9 +424,24 @@ body {
     </section>
     <aside id="side-panel" class="hidden">
       <div id="panel-header">
-        <h2 id="panel-date-title"></h2>
-        <button id="btn-add-task">＋ 新增任務</button>
-        <button id="btn-close-panel">✕</button>
+        <div id="panel-header-top">
+          <h2 id="panel-date-title"></h2>
+          <button id="btn-add-task">＋ 新增任務</button>
+          <button id="btn-close-panel">✕</button>
+        </div>
+        <div id="leave-row">
+          <select id="leave-type-select">
+            <option value="">── 選擇假別 ──</option>
+            <option value="年假">年假</option>
+            <option value="個人假">個人假</option>
+            <option value="病假">病假</option>
+            <option value="公假">公假</option>
+            <option value="特休">特休</option>
+            <option value="補休">補休</option>
+          </select>
+          <button id="btn-set-leave">🌿 標記休假</button>
+          <button id="btn-cancel-leave" class="hidden">✕ 取消</button>
+        </div>
       </div>
       <div id="task-list"></div>
     </aside>
@@ -514,14 +586,16 @@ function saveConfig(cfg) {
 
 // ── App State ──
 const state = {
-  data: { tasks: {}, tags: [] },
+  data: { tasks: {}, tags: [], leaves: {} },
   currentYear: 0,
   currentMonth: 0,
   selectedDate: null,
   editingTaskId: null,
   uid: null,
   db: null,
-  doneCollapsed: false
+  doneCollapsed: false,
+  viewMode: 'month',       // 'month' | 'week'
+  currentWeekStart: null   // Date object: Sunday of current week in week view
 };
 
 // ── Firebase init ──
@@ -559,8 +633,9 @@ function startRealtimeSync() {
     if (val) {
       state.data.tasks = val.tasks || {};
       state.data.tags = val.tags || [];
+      state.data.leaves = val.leaves || {};
     } else {
-      state.data = { tasks: {}, tags: [] };
+      state.data = { tasks: {}, tags: [], leaves: {} };
     }
     renderCalendar();
     if (state.selectedDate) renderTaskList();
@@ -645,11 +720,77 @@ function escHtml(s) {
 
 // ── Calendar ──
 function renderCalendar() {
+  if (state.viewMode === 'week') renderWeekView();
+  else renderMonthView();
+}
+
+// ── helper: add drag-drop events to a calendar cell for cross-date dragging ──
+function addCellDropEvents(cell, dateStr) {
+  cell.addEventListener('dragover', e => {
+    if (!e.dataTransfer.types.includes('taskid')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    cell.classList.add('drag-target');
+  });
+  cell.addEventListener('dragleave', e => {
+    if (!cell.contains(e.relatedTarget)) cell.classList.remove('drag-target');
+  });
+  cell.addEventListener('drop', e => {
+    e.preventDefault();
+    cell.classList.remove('drag-target');
+    const taskId = e.dataTransfer.getData('taskId');
+    if (taskId && state.data.tasks[taskId]) {
+      state.data.tasks[taskId].dueDate = dateStr;
+      saveData();
+      renderCalendar();
+      if (state.selectedDate) renderTaskList();
+    }
+  });
+}
+
+// ── helper: render task counts badge for month view ──
+function renderTaskCounts(cell, dateStr) {
+  const tasks = getTasksForDate(dateStr);
+  if (tasks.length === 0) return;
+  const active = tasks.filter(t => t.status !== '已完成');
+  const done   = tasks.filter(t => t.status === '已完成');
+  const high = active.filter(t => t.priority === '高').length;
+  const mid  = active.filter(t => t.priority === '中').length;
+  const low  = active.filter(t => t.priority === '低').length;
+  const doneN = done.length;
+  if (!high && !mid && !low && !doneN) return;
+  const el = document.createElement('div');
+  el.className = 'task-counts';
+  if (high) el.innerHTML += `<span class="count-badge count-high">高 ${high}</span>`;
+  if (mid)  el.innerHTML += `<span class="count-badge count-mid">中 ${mid}</span>`;
+  if (low)  el.innerHTML += `<span class="count-badge count-low">低 ${low}</span>`;
+  if (doneN) el.innerHTML += `<span class="count-badge count-done">✓${doneN}</span>`;
+  cell.appendChild(el);
+}
+
+// ── helper: render holiday + leave labels ──
+function renderDayLabels(cell, dateStr) {
+  if (HOLIDAYS[dateStr]) {
+    const hl = document.createElement('div');
+    hl.className = 'holiday-label';
+    hl.textContent = HOLIDAYS[dateStr];
+    cell.appendChild(hl);
+  }
+  if (state.data.leaves && state.data.leaves[dateStr]) {
+    const lv = document.createElement('div');
+    lv.className = 'leave-label';
+    lv.textContent = '🌿 ' + state.data.leaves[dateStr];
+    cell.appendChild(lv);
+  }
+}
+
+function renderMonthView() {
   const grid = document.getElementById('calendar-grid');
   const title = document.getElementById('month-title');
   const { currentYear: y, currentMonth: m } = state;
   const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
   title.textContent = `${y} 年 ${monthNames[m]}`;
+  grid.classList.remove('week-view');
   const firstDay = new Date(y, m, 1).getDay();
   const daysInMonth = new Date(y, m+1, 0).getDate();
   const daysInPrev = new Date(y, m, 0).getDate();
@@ -676,40 +817,21 @@ function renderCalendar() {
       if (dow === 6) cell.classList.add('saturday');
       if (dateStr === today) cell.classList.add('today');
       if (dateStr === state.selectedDate) cell.classList.add('selected');
-      cell.dataset.date = dateStr;
       if (HOLIDAYS[dateStr]) cell.classList.add('holiday');
+      if (state.data.leaves && state.data.leaves[dateStr]) cell.classList.add('leave-day');
+      cell.dataset.date = dateStr;
       cell.addEventListener('click', () => openPanel(dateStr));
       cell.addEventListener('dblclick', e => { e.stopPropagation(); openPanel(dateStr); openAddModal(dateStr); });
+      addCellDropEvents(cell, dateStr);
     }
     const [,,dayNum] = dateStr.split('-');
     const numEl = document.createElement('div');
     numEl.className = 'day-num';
     numEl.textContent = String(Number(dayNum));
     cell.appendChild(numEl);
-    if (HOLIDAYS[dateStr]) {
-      const hl = document.createElement('div');
-      hl.className = 'holiday-label';
-      hl.textContent = HOLIDAYS[dateStr];
-      cell.appendChild(hl);
-    }
     if (!cell.classList.contains('other-month')) {
-      const tasks = getTasksForDate(dateStr);
-      if (tasks.length > 0) {
-        const dotsEl = document.createElement('div');
-        dotsEl.className = 'task-dots';
-        tasks.slice(0, 6).forEach(t => {
-          const dot = document.createElement('div');
-          dot.className = `dot dot-${t.priority==='高'?'high':t.priority==='中'?'mid':'low'}`;
-          dotsEl.appendChild(dot);
-        });
-        if (tasks.length > 6) {
-          const more = document.createElement('span');
-          more.className = 'dot-more';
-          more.textContent = `+${tasks.length - 6}`;
-          dotsEl.appendChild(more);
-        }
-        cell.appendChild(dotsEl);
-      }
+      renderDayLabels(cell, dateStr);
+      renderTaskCounts(cell, dateStr);
     }
     cells.push(cell);
   }
@@ -717,20 +839,126 @@ function renderCalendar() {
   cells.forEach(c => grid.appendChild(c));
 }
 
+function renderWeekView() {
+  const grid = document.getElementById('calendar-grid');
+  const title = document.getElementById('month-title');
+  grid.classList.add('week-view');
+  // Compute week start (Sunday)
+  if (!state.currentWeekStart) {
+    const d = new Date();
+    d.setDate(d.getDate() - d.getDay());
+    state.currentWeekStart = d;
+  }
+  const ws = state.currentWeekStart;
+  const we = new Date(ws); we.setDate(ws.getDate() + 6);
+  const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
+  title.textContent = `${ws.getFullYear()} 年  ${fmt(ws)} – ${fmt(we)}`;
+  const today = todayStr();
+  const cells = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(ws); d.setDate(ws.getDate() + i);
+    const dateStr = toDateStr(d.getFullYear(), d.getMonth(), d.getDate());
+    const cell = document.createElement('div');
+    cell.className = 'week-cell';
+    if (i === 0) cell.classList.add('sunday');
+    if (i === 6) cell.classList.add('saturday');
+    if (dateStr === today) cell.classList.add('today');
+    if (HOLIDAYS[dateStr]) cell.classList.add('holiday');
+    if (state.data.leaves && state.data.leaves[dateStr]) cell.classList.add('leave-day');
+    cell.dataset.date = dateStr;
+    // Date number
+    const numEl = document.createElement('div');
+    numEl.className = 'day-num';
+    numEl.textContent = `${d.getMonth()+1}/${d.getDate()}`;
+    cell.appendChild(numEl);
+    // Labels (holiday / leave)
+    renderDayLabels(cell, dateStr);
+    // Task list
+    const taskListEl = document.createElement('div');
+    taskListEl.className = 'week-task-list';
+    const tasks = getTasksForDate(dateStr).sort((a, b) => {
+      if (a.status === '已完成' && b.status !== '已完成') return 1;
+      if (a.status !== '已完成' && b.status === '已完成') return -1;
+      return (a.order ?? a.createdAt) - (b.order ?? b.createdAt);
+    });
+    tasks.forEach(task => {
+      const item = document.createElement('div');
+      item.className = `week-task-item priority-${task.priority} status-${task.status}`;
+      item.title = task.title;
+      item.textContent = (task.status === '已完成' ? '✓ ' : '') + task.title;
+      item.draggable = true;
+      item.addEventListener('click', e => { e.stopPropagation(); openEditModal(task.id); });
+      item.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('taskId', task.id);
+        e.dataTransfer.setData('taskid', task.id); // lowercase for dragover check
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      taskListEl.appendChild(item);
+    });
+    cell.appendChild(taskListEl);
+    // Add task button
+    const addBtn = document.createElement('div');
+    addBtn.className = 'week-add-btn';
+    addBtn.textContent = '＋ 新增';
+    addBtn.title = '新增任務';
+    addBtn.addEventListener('click', e => { e.stopPropagation(); openAddModal(dateStr); });
+    cell.appendChild(addBtn);
+    // Drag-drop
+    addCellDropEvents(cell, dateStr);
+    // Double-click fallback
+    cell.addEventListener('dblclick', e => { e.stopPropagation(); openAddModal(dateStr); });
+    cells.push(cell);
+  }
+  grid.innerHTML = '';
+  cells.forEach(c => grid.appendChild(c));
+}
+
 function prevMonth() {
+  if (state.viewMode === 'week') { prevWeek(); return; }
   if (state.currentMonth === 0) { state.currentMonth = 11; state.currentYear--; }
   else state.currentMonth--;
   renderCalendar();
 }
 function nextMonth() {
+  if (state.viewMode === 'week') { nextWeek(); return; }
   if (state.currentMonth === 11) { state.currentMonth = 0; state.currentYear++; }
   else state.currentMonth++;
+  renderCalendar();
+}
+function prevWeek() {
+  const d = new Date(state.currentWeekStart);
+  d.setDate(d.getDate() - 7);
+  state.currentWeekStart = d;
+  renderCalendar();
+}
+function nextWeek() {
+  const d = new Date(state.currentWeekStart);
+  d.setDate(d.getDate() + 7);
+  state.currentWeekStart = d;
   renderCalendar();
 }
 function goToday() {
   const d = new Date();
   state.currentYear = d.getFullYear();
   state.currentMonth = d.getMonth();
+  // Update week start to current week
+  const ws = new Date(d); ws.setDate(d.getDate() - d.getDay());
+  state.currentWeekStart = ws;
+  renderCalendar();
+}
+function switchView(mode) {
+  state.viewMode = mode;
+  document.getElementById('btn-view-month').classList.toggle('active', mode === 'month');
+  document.getElementById('btn-view-week').classList.toggle('active', mode === 'week');
+  if (mode === 'week' && !state.currentWeekStart) {
+    const d = new Date(); d.setDate(d.getDate() - d.getDay());
+    state.currentWeekStart = d;
+  }
+  // In week view, side panel is not needed
+  if (mode === 'week') {
+    document.getElementById('side-panel').classList.add('hidden');
+    state.selectedDate = null;
+  }
   renderCalendar();
 }
 
@@ -740,6 +968,47 @@ function openPanel(dateStr) {
   document.getElementById('panel-date-title').textContent = formatDateDisplay(dateStr);
   renderTaskList();
   document.getElementById('side-panel').classList.remove('hidden');
+  // Update leave UI
+  updateLeaveUI(dateStr);
+  renderCalendar();
+}
+function updateLeaveUI(dateStr) {
+  const leaveType = (state.data.leaves && state.data.leaves[dateStr]) || '';
+  const sel = document.getElementById('leave-type-select');
+  const btnSet = document.getElementById('btn-set-leave');
+  const btnCancel = document.getElementById('btn-cancel-leave');
+  sel.value = leaveType;
+  if (leaveType) {
+    btnSet.textContent = '🌿 ' + leaveType;
+    btnSet.classList.add('has-leave');
+    btnCancel.classList.remove('hidden');
+  } else {
+    btnSet.textContent = '🌿 標記休假';
+    btnSet.classList.remove('has-leave');
+    btnCancel.classList.add('hidden');
+  }
+}
+function setLeave() {
+  const dateStr = state.selectedDate;
+  const leaveType = document.getElementById('leave-type-select').value;
+  if (!dateStr) return;
+  if (!state.data.leaves) state.data.leaves = {};
+  if (leaveType) {
+    state.data.leaves[dateStr] = leaveType;
+  } else {
+    delete state.data.leaves[dateStr];
+  }
+  saveData();
+  updateLeaveUI(dateStr);
+  renderCalendar();
+}
+function cancelLeave() {
+  const dateStr = state.selectedDate;
+  if (!dateStr || !state.data.leaves) return;
+  delete state.data.leaves[dateStr];
+  document.getElementById('leave-type-select').value = '';
+  saveData();
+  updateLeaveUI(dateStr);
   renderCalendar();
 }
 function closePanel() {
@@ -790,6 +1059,8 @@ function renderTaskList() {
       dragSrcId = task.id;
       card.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('taskId', task.id);
+      e.dataTransfer.setData('taskid', task.id); // lowercase for dragover check
     });
     card.addEventListener('dragend', () => {
       card.classList.remove('dragging');
@@ -972,6 +1243,10 @@ function initApp() {
   document.getElementById('btn-add-task').addEventListener('click', () => openAddModal(state.selectedDate));
   document.getElementById('btn-manage-tags').addEventListener('click', openTagModal);
   document.getElementById('btn-signout').addEventListener('click', signOut);
+  document.getElementById('btn-view-month').addEventListener('click', () => switchView('month'));
+  document.getElementById('btn-view-week').addEventListener('click', () => switchView('week'));
+  document.getElementById('btn-set-leave').addEventListener('click', setLeave);
+  document.getElementById('btn-cancel-leave').addEventListener('click', cancelLeave);
   document.getElementById('task-form').addEventListener('submit', saveTask);
   document.getElementById('btn-cancel-modal').addEventListener('click', closeModal);
   document.getElementById('btn-delete-task').addEventListener('click', deleteTask);
