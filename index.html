@@ -175,7 +175,8 @@ body {
 .day-cell.saturday { background: #f6f8ff; }
 .day-cell.saturday .day-num { color: #3b82f6; }
 /* ── Task counts (replaces dots) ── */
-.task-counts { display: flex; gap: 4px; flex-wrap: wrap; margin-top: auto; padding-top: 3px; }
+.task-counts { display: flex; flex-direction: column; gap: 3px; margin-top: auto; padding-top: 3px; }
+.count-row   { display: flex; gap: 4px; flex-wrap: wrap; }
 .count-badge { font-size: 0.75rem; font-weight: 700; padding: 2px 6px; border-radius: 10px; line-height: 1.5; white-space: nowrap; }
 .count-high { background: #fef2f2; color: var(--priority-high); }
 .count-mid  { background: #fff7ed; color: #c2410c; }
@@ -902,14 +903,32 @@ function renderTaskCounts(cell, dateStr) {
   const low  = active.filter(t => t.priority === '低').length;
   const doneN = done.length;
   if (!high && !mid && !low && !doneN && !meetingCount) return;
-  const el = document.createElement('div');
-  el.className = 'task-counts';
-  if (meetingCount) el.innerHTML += `<span class="count-badge count-meeting">🗓 ${meetingCount}</span>`;
-  if (high) el.innerHTML += `<span class="count-badge count-high">高 ${high}</span>`;
-  if (mid)  el.innerHTML += `<span class="count-badge count-mid">中 ${mid}</span>`;
-  if (low)  el.innerHTML += `<span class="count-badge count-low">低 ${low}</span>`;
-  if (doneN) el.innerHTML += `<span class="count-badge count-done">✓${doneN}</span>`;
-  cell.appendChild(el);
+  const wrap = document.createElement('div');
+  wrap.className = 'task-counts';
+  // 第二列：會議
+  if (meetingCount) {
+    const row = document.createElement('div');
+    row.className = 'count-row';
+    row.innerHTML = `<span class="count-badge count-meeting">🗓 ${meetingCount}</span>`;
+    wrap.appendChild(row);
+  }
+  // 第三列：未完成任務（高/中/低 badge 橫排）
+  if (high || mid || low) {
+    const row = document.createElement('div');
+    row.className = 'count-row';
+    if (high) row.innerHTML += `<span class="count-badge count-high">高 ${high}</span>`;
+    if (mid)  row.innerHTML += `<span class="count-badge count-mid">中 ${mid}</span>`;
+    if (low)  row.innerHTML += `<span class="count-badge count-low">低 ${low}</span>`;
+    wrap.appendChild(row);
+  }
+  // 第四列：已完成
+  if (doneN) {
+    const row = document.createElement('div');
+    row.className = 'count-row';
+    row.innerHTML = `<span class="count-badge count-done">✓${doneN}</span>`;
+    wrap.appendChild(row);
+  }
+  cell.appendChild(wrap);
 }
 
 // ── helper: render holiday + leave labels ──
